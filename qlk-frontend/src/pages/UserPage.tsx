@@ -248,25 +248,25 @@ const UserPage: React.FC = () => {
         </div>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+      <div className="mobile-stack" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
         <div>
-          <h1 className="page-title">Quản lý người dùng</h1>
-          <p className="page-subtitle">Quản lý tài khoản, vai trò và quyền truy cập hệ thống</p>
+          <h1 className="page-title mobile-text-sm" style={{ margin: 0 }}>Quản lý người dùng</h1>
+          <p className="page-subtitle" style={{ margin: 0, fontSize: '13px' }}>Quản lý tài khoản và quyền</p>
         </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div className="mobile-stack" style={{ display: 'flex', gap: '12px' }}>
           <select 
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="form-input"
-            style={{ width: 'auto' }}
+            className="form-input mobile-full-width"
+            style={{ width: 'auto', height: '48px' }}
           >
             <option value="all">Tất cả trạng thái</option>
             <option value="active">Đang hoạt động</option>
             <option value="inactive">Đã khóa</option>
           </select>
           {hasPermission(PERMISSIONS.Users.Create) && (
-            <button onClick={() => openForm()} className="btn-primary" style={{ padding: '12px 24px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Plus size={20} /> Thêm người dùng
+            <button onClick={() => openForm()} className="btn-primary mobile-full-width" style={{ padding: '0 24px', height: '48px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
+              <Plus size={20} /> Thêm mới
             </button>
           )}
         </div>
@@ -285,7 +285,7 @@ const UserPage: React.FC = () => {
         ) : (
           users.map(user => (
             <div key={user.id} className="card user-card animate-scale-in" style={{ padding: '24px', position: 'relative' }}>
-              <div style={{ position: 'absolute', top: '16px', right: '16px', display: 'flex', gap: '8px' }}>
+              <div className="user-card-actions">
                 {hasPermission(PERMISSIONS.Users.Edit) && (
                   <button onClick={() => { setResettingUser(user); setShowResetModal(true); }} className="action-btn" title="Reset mật khẩu" style={{ color: 'var(--primary)' }}>
                     <KeyRound size={16} />
@@ -527,6 +527,29 @@ const UserPage: React.FC = () => {
 
   return (
     <main style={{ padding: '24px' }}>
+      <style>{`
+        .user-card-actions {
+          position: absolute;
+          top: 16px;
+          right: 16px;
+          display: flex;
+          gap: 4px;
+        }
+        @media (max-width: 640px) {
+          main { padding: 16px !important; }
+          .user-card-actions {
+            position: relative;
+            top: 0;
+            right: 0;
+            justify-content: flex-end;
+            margin-bottom: -10px;
+            margin-top: -10px;
+          }
+          .user-card {
+            padding: 16px !important;
+          }
+        }
+      `}</style>
       {viewMode === 'LIST' ? renderListView() : renderFormView()}
     </main>
   );

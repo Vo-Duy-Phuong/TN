@@ -654,6 +654,23 @@ canvas {
 .premium-scroll::-webkit-scrollbar {
   width: 6px;
 }
+/* Mobile Utility Classes */
+@media (max-width: 640px) {
+  .mobile-stack {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 16px !important;
+  }
+  .mobile-hide {
+    display: none !important;
+  }
+  .mobile-text-sm {
+    font-size: 14px !important;
+  }
+  .mobile-full-width {
+    width: 100% !important;
+  }
+}
 
 .premium-scroll::-webkit-scrollbar-thumb {
   background: rgba(0, 102, 204, 0.1);

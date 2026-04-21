@@ -485,7 +485,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, activePage, onNavigate 
               .mobile-only { display: flex !important; }
               .header-search-wrapper { max-width: 100% !important; }
               .search-shortcut span { display: none !important; }
-              header { padding: 12px 16px !important; }
+              header { padding: 10px 12px !important; gap: 8px !important; }
+              .desktop-only-header-btn { display: none !important; }
             }
           `}</style>
           <div className="search-wrapper header-search-wrapper" style={{ flex: 1, maxWidth: '600px' }}>
@@ -582,7 +583,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, activePage, onNavigate 
 
             <div ref={menuRef} style={{ position: 'relative' }}>
               <div 
-                className="header-btn"
+                className="header-btn desktop-only-header-btn"
                 onClick={() => {
                   setIsMenuOpen(!isMenuOpen);
                   setIsNotificationOpen(false);
