@@ -115,7 +115,7 @@ const CustomerPortal: React.FC = () => {
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.4 }}
     >
-      <section style={{ padding: '80px 40px', background: 'linear-gradient(135deg, #0066CC 0%, #00A3FF 100%)', color: 'white', textAlign: 'center', position: 'relative', overflow: 'hidden', borderRadius: '0 0 40px 40px', marginBottom: '60px' }}>
+      <section className="hero-section" style={{ background: 'linear-gradient(135deg, #0066CC 0%, #00A3FF 100%)', color: 'white', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
         <div style={{ maxWidth: '900px', margin: '0 auto', position: 'relative', zIndex: 2 }}>
           <motion.div 
             initial={{ opacity: 0, scale: 0.9 }} 
@@ -125,7 +125,7 @@ const CustomerPortal: React.FC = () => {
           >
             <Star size={16} fill="white" /> VNPT - Kết nối mọi giá trị
           </motion.div>
-          <h1 style={{ fontSize: '64px', fontWeight: 900, marginBottom: '24px', lineHeight: 1.1, letterSpacing: '-2px' }}>Trải nghiệm dịch vụ số đỉnh cao cùng VNPT</h1>
+          <h1 className="hero-title">Trải nghiệm dịch vụ số đỉnh cao cùng VNPT</h1>
           <p style={{ fontSize: '20px', opacity: 0.9, marginBottom: '40px', maxWidth: '700px', margin: '0 auto 40px' }}>
             Chào mừng bạn đến với cổng thông tin khách hàng VNPT Connect. Khám phá hệ sinh thái dịch vụ viễn thông và công nghệ hàng đầu Việt Nam.
           </p>
@@ -140,7 +140,7 @@ const CustomerPortal: React.FC = () => {
 
       <section style={{ padding: '0 40px 100px' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '32px' }}>
+          <div className="responsive-grid-3">
             <div className="card" style={{ padding: '40px', borderRadius: '32px', cursor: 'pointer', border: '1px solid #f1f5f9' }} onClick={() => setActiveView('SERVICES')}>
               <div style={{ width: '64px', height: '64px', borderRadius: '20px', background: '#e0f2fe', color: '#0369a1', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
                 <Monitor size={32} />
@@ -351,7 +351,7 @@ const CustomerPortal: React.FC = () => {
       transition={{ duration: 0.4 }}
     >
       <section style={{ padding: '100px 40px', background: 'white', minHeight: '80vh' }}>
-        <div style={{ maxWidth: '1000px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.2fr)', gap: '60px', alignItems: 'center' }}>
+        <div className="responsive-grid-2" style={{ maxWidth: '1000px', margin: '0 auto' }}>
           <div>
             <h2 style={{ fontSize: '40px', fontWeight: 800, color: '#1e293b', marginBottom: '24px' }}>Sẵn sàng nâng cấp không gian số của bạn?</h2>
             <p style={{ color: '#64748b', fontSize: '18px', marginBottom: '40px', lineHeight: 1.6 }}>Điền thông tin và VNPT sẽ liên hệ để tư vấn và lắp đặt tại nhà cho bạn ngay trong ngày.</p>
@@ -545,14 +545,14 @@ const CustomerPortal: React.FC = () => {
   return (
     <div style={{ minHeight: '100vh', background: 'white', overflowX: 'hidden' }}>
       {/* Navigation */}
-      <nav style={{ padding: '20px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)', zIndex: 100, borderBottom: '1px solid #f1f5f9' }}>
+      <nav className="responsive-nav">
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={() => setActiveView('HOME')}>
           <div style={{ width: '40px', height: '40px', background: '#0066CC', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Zap color="white" fill="white" size={24} />
           </div>
-          <span style={{ fontSize: '24px', fontWeight: 900, color: '#0066CC', letterSpacing: '-1px' }}>VNPT <span style={{ color: '#1e293b' }}>Connect</span></span>
+          <span className="logo-text" style={{ fontWeight: 900, color: '#0066CC', letterSpacing: '-1px' }}>VNPT <span style={{ color: '#1e293b' }}>Connect</span></span>
         </div>
-        <div style={{ display: 'flex', gap: '32px', alignItems: 'center' }}>
+        <div className="nav-links">
           <button onClick={() => setActiveView('HOME')} style={{ fontWeight: 700, color: activeView === 'HOME' ? '#0066CC' : '#475569', background: 'none', border: 'none', cursor: 'pointer', position: 'relative' }}>
             Trang chủ
             {activeView === 'HOME' && <motion.div layoutId="activeNav" style={{ position: 'absolute', bottom: '-28px', left: 0, right: 0, height: '4px', background: '#0066CC', borderRadius: '4px' }} />}
@@ -571,9 +571,10 @@ const CustomerPortal: React.FC = () => {
           </button>
           <button
             onClick={() => navigate('/login')}
+            className="staff-btn"
             style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '20px', background: '#f1f5f9', border: 'none', fontWeight: 600, color: '#64748b', cursor: 'pointer', marginLeft: '16px' }}
           >
-            <Lock size={16} /> Nhân viên VNPT
+            <Lock size={16} /> <span className="staff-btn-text">Nhân viên VNPT</span>
           </button>
         </div>
       </nav>
@@ -620,6 +621,83 @@ const CustomerPortal: React.FC = () => {
           20%, 80% { transform: translate3d(2px, 0, 0); }
           30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
           40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+
+        /* Responsive Styles */
+        .responsive-grid-3 {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 32px;
+        }
+        .responsive-grid-2 {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+          gap: 60px;
+          align-items: center;
+        }
+        .responsive-nav {
+          padding: 20px 40px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          position: sticky;
+          top: 0;
+          background: rgba(255,255,255,0.9);
+          backdrop-filter: blur(10px);
+          zIndex: 100;
+          border-bottom: 1px solid #f1f5f9;
+        }
+        .hero-title {
+          font-size: 64px;
+          font-weight: 900;
+          margin-bottom: 24px;
+          line-height: 1.1;
+          letter-spacing: -2px;
+        }
+        .hero-section {
+          padding: 80px 40px;
+          border-radius: 0 0 40px 40px;
+          margin-bottom: 60px;
+        }
+        .nav-links {
+          display: flex;
+          gap: 32px;
+          align-items: center;
+        }
+
+        @media (max-width: 768px) {
+          .responsive-grid-3, .responsive-grid-2 {
+            grid-template-columns: 1fr !important;
+            gap: 24px !important;
+          }
+          .responsive-nav {
+            padding: 12px 20px !important;
+            flex-direction: column !important;
+            gap: 12px !important;
+          }
+          .nav-links {
+            gap: 16px !important;
+            width: 100% !important;
+            justify-content: center !important;
+            font-size: 13px !important;
+          }
+          .nav-links button span {
+            display: none; /* Hide text on mobile nav if needed */
+          }
+          .hero-title {
+            font-size: 32px !important;
+          }
+          .hero-section {
+            padding: 60px 20px !important;
+            border-radius: 0 0 20px 20px !important;
+            margin-bottom: 40px !important;
+          }
+          .staff-btn {
+            display: none !important; /* Hide staff button on mobile web for cleaner look */
+          }
+          .logo-text {
+            font-size: 20px !important;
+          }
         }
       `}</style>
     </div>
