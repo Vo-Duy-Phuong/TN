@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using QLK.Application.DTOs;
 using QLK.Application.DTOs.Product;
 using QLK.Application.Services;
 using QLK.Domain.Constants;
@@ -20,16 +21,24 @@ public class ProductsController : ControllerBase
 
     [HttpGet]
     [Authorize(CustomPermissions.Products.View)]
-    public async Task<ActionResult<IEnumerable<ProductDto>>> GetProducts([FromQuery] ProductFilterDto filter, CancellationToken ct)
+    public async Task<ActionResult<PagedResult<ProductDto>>> GetProducts([FromQuery] ProductFilterDto filter, CancellationToken ct)
     {
         var (items, totalCount) = await _productService.GetProductsAsync(filter, ct);
-        Response.Headers.Add("X-Total-Count", totalCount.ToString());
-        return Ok(items);
+        return Ok(new PagedResult<ProductDto>(items, totalCount));
     }
 
     [HttpGet("{id}")]
     [Authorize(CustomPermissions.Products.View)]
     public async Task<ActionResult<ProductDto>> GetProduct(Guid id, CancellationToken ct)
+    {
+        var product = await _productService.GetProductByIdAsync(id, ct);
+        if (product == null) return NotFound();
+        return Ok(product);
+    }
+
+    [AllowAnonymous]
+    [HttpGet("public/{id}")]
+    public async Task<ActionResult<ProductDto>> GetPublicProduct(Guid id, CancellationToken ct)
     {
         var product = await _productService.GetProductByIdAsync(id, ct);
         if (product == null) return NotFound();

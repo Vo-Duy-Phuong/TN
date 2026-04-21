@@ -26,4 +26,5 @@ public class Warehouse
     // Navigation properties
     public ICollection<ImportReceipt> ImportReceipts { get; set; } = new List<ImportReceipt>();
     public ICollection<ExportReceipt> ExportReceipts { get; set; } = new List<ExportReceipt>();
+    public ICollection<RetrievalReceipt> RetrievalReceipts { get; set; } = new List<RetrievalReceipt>();
 }

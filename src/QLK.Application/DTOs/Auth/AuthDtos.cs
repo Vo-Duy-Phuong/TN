@@ -33,3 +33,40 @@ public class ChangePasswordDto
     public string CurrentPassword { get; set; } = string.Empty;
     public string NewPassword { get; set; } = string.Empty;
 }
+
+public class ForgotPasswordDto
+{
+    public string Email { get; set; } = string.Empty;
+}
+
+public class ResetPasswordDto
+{
+    public string Email { get; set; } = string.Empty;
+    public string ResetCode { get; set; } = string.Empty;
+    public string NewPassword { get; set; } = string.Empty;
+}
+
+public class SetSecurityQuestionDto
+{
+    public string Question { get; set; } = string.Empty;
+    public string Answer { get; set; } = string.Empty;
+}
+
+public class VerifySecurityQuestionDto
+{
+    public string Username { get; set; } = string.Empty;
+    public string Answer { get; set; } = string.Empty;
+}
+
+public class ResetPasswordByQuestionDto
+{
+    public string Username { get; set; } = string.Empty;
+    public string SecurityAnswer { get; set; } = string.Empty;
+    public string NewPassword { get; set; } = string.Empty;
+}
+
+public class AdminResetPasswordDto
+{
+    public Guid UserId { get; set; }
+    public string NewPassword { get; set; } = string.Empty;
+}

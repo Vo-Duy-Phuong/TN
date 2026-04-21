@@ -7,7 +7,7 @@ namespace QLK.Application.Services;
 
 public interface IWarehouseService
 {
-    Task<IEnumerable<WarehouseDto>> GetWarehousesAsync(CancellationToken ct = default);
+    Task<(IEnumerable<WarehouseDto> Items, int TotalCount)> GetWarehousesAsync(WarehouseFilterDto filter, CancellationToken ct = default);
     Task<WarehouseDto?> GetWarehouseByIdAsync(Guid id, CancellationToken ct = default);
     Task<WarehouseDto> CreateWarehouseAsync(CreateWarehouseDto dto, CancellationToken ct = default);
     Task UpdateWarehouseAsync(Guid id, UpdateWarehouseDto dto, CancellationToken ct = default);
@@ -23,13 +23,27 @@ public class WarehouseService : IWarehouseService
         _context = context;
     }
 
-    public async Task<IEnumerable<WarehouseDto>> GetWarehousesAsync(CancellationToken ct = default)
+    public async Task<(IEnumerable<WarehouseDto> Items, int TotalCount)> GetWarehousesAsync(WarehouseFilterDto filter, CancellationToken ct = default)
     {
-        var warehouses = await _context.Warehouses
+        var query = _context.Warehouses
             .Include(w => w.Manager)
+            .AsQueryable();
+
+        if (!string.IsNullOrEmpty(filter.Search))
+        {
+            var search = filter.Search.ToLower();
+            query = query.Where(w => w.WarehouseName.ToLower().Contains(search) || 
+                                    (w.Location != null && w.Location.ToLower().Contains(search)));
+        }
+
+        var totalCount = await query.CountAsync(ct);
+        var warehouses = await query
             .OrderBy(w => w.WarehouseName)
+            .Skip((filter.PageNumber - 1) * filter.PageSize)
+            .Take(filter.PageSize)
             .ToListAsync(ct);
-        return warehouses.Select(MapToDto);
+
+        return (warehouses.Select(MapToDto), totalCount);
     }
 
     public async Task<WarehouseDto?> GetWarehouseByIdAsync(Guid id, CancellationToken ct = default)

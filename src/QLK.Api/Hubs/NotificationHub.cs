@@ -9,6 +9,7 @@ public class NotificationHub : Hub
     public override async Task OnConnectedAsync()
     {
         var userId = Context.UserIdentifier;
+        Console.WriteLine($"[SignalR] User connected: {userId ?? "Anonymous"} (ConnectionId: {Context.ConnectionId})");
         if (!string.IsNullOrEmpty(userId))
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, $"User_{userId}");

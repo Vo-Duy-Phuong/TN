@@ -10,6 +10,7 @@ using QLK.Application.Services;
 using QLK.Infrastructure.Data;
 using QLK.Infrastructure.Security;
 using QLK.Infrastructure.Storage;
+using QLK.Infrastructure.Email;
 using QLK.Domain.Interfaces;
 using Minio;
 using System.Text;
@@ -55,7 +56,8 @@ builder.Services.AddSwaggerGen(c =>
 
 // Database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
+           .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
 
 // JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
@@ -112,20 +114,38 @@ builder.Services.AddScoped<IInventoryLogService, InventoryLogService>();
 builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IAuditService, AuditService>();
+builder.Services.AddScoped<IServiceRequestService, ServiceRequestService>();
+builder.Services.AddScoped<IIndividualEquipmentService, IndividualEquipmentService>();
+builder.Services.AddScoped<IRetrievalService, RetrievalService>();
+builder.Services.AddScoped<IGISService, GISService>();
+builder.Services.AddHttpClient<IGeocodingService, GeocodingService>();
+builder.Services.AddHttpClient<IAIService, GeminiService>();
 
-// Storage
-builder.Services.AddScoped<IMinioClient>(sp =>
+// Storage - Switch between MinIO and Cloudinary
+if (!string.IsNullOrEmpty(builder.Configuration["Cloudinary:CloudName"]))
 {
-    var minioSettings = builder.Configuration.GetSection("MinioSettings");
-    return new MinioClient()
-        .WithEndpoint(minioSettings["Endpoint"] ?? "localhost:9100")
-        .WithCredentials(minioSettings["AccessKey"] ?? "minioadmin", minioSettings["SecretKey"] ?? "minioadmin123")
-        .WithSSL(bool.Parse(minioSettings["UseSSL"] ?? "false"))
-        .Build();
-});
-builder.Services.AddScoped<IStorageService, MinioService>();
+    builder.Services.AddScoped<IStorageService, CloudinaryService>();
+    Console.WriteLine("Using Cloudinary for storage.");
+}
+else
+{
+    builder.Services.AddScoped<IMinioClient>(sp =>
+    {
+        var minioSettings = builder.Configuration.GetSection("MinioSettings");
+        return new MinioClient()
+            .WithEndpoint(minioSettings["Endpoint"] ?? "localhost:9100")
+            .WithCredentials(minioSettings["AccessKey"] ?? "minioadmin", minioSettings["SecretKey"] ?? "minioadmin123")
+            .WithSSL(bool.Parse(minioSettings["UseSSL"] ?? "false"))
+            .Build();
+    });
+    builder.Services.AddScoped<IStorageService, MinioService>();
+    Console.WriteLine("Using MinIO for storage.");
+}
 
 builder.Services.AddScoped<INotificationSender, SignalRNotificationSender>();
+builder.Services.AddSingleton<IUserIdProvider, CustomUserIdProvider>();
 
 builder.Services.AddScoped<IJwtService>(sp =>
 {
@@ -143,6 +163,8 @@ builder.Services.AddScoped<IJwtService>(sp =>
 builder.Services.AddSignalR(options =>
 {
     options.EnableDetailedErrors = true;
+}).AddJsonProtocol(options => {
+    options.PayloadSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
 });
 
 // CORS
@@ -153,7 +175,8 @@ builder.Services.AddCors(options =>
         policy.SetIsOriginAllowed(_ => true)
               .AllowAnyMethod()
               .AllowAnyHeader()
-              .AllowCredentials();
+              .AllowCredentials()
+              .WithExposedHeaders("X-Total-Count", "x-total-count");
     });
 });
 
@@ -165,13 +188,19 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        // Auto-apply pending migrations on startup
+        await context.Database.MigrateAsync();
+        Console.WriteLine("Database migrations applied successfully.");
         await DbInitializer.SeedAsync(context);
         Console.WriteLine("Database initialization and seeding completed.");
 
-        // Ensure MinIO bucket exists
-        var storageService = scope.ServiceProvider.GetRequiredService<IStorageService>();
-        await storageService.EnsureBucketExistsAsync();
-        Console.WriteLine("MinIO bucket initialization completed.");
+        // Ensure Bucket exists (Only for MinIO)
+        if (builder.Configuration["Cloudinary:CloudName"] == null)
+        {
+            var storageService = scope.ServiceProvider.GetRequiredService<IStorageService>();
+            await storageService.EnsureBucketExistsAsync();
+            Console.WriteLine("MinIO bucket initialization completed.");
+        }
     }
     catch (Exception ex)
     {
@@ -186,8 +215,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "QLK Warehouse API v1"));
 }
 
-app.UseResponseCompression();
 app.UseCors("AllowAll");
+app.UseStaticFiles();
+app.UseResponseCompression();
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -195,4 +225,6 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHub<NotificationHub>("/hubs/notifications");
 
-app.Run();
+// Configure dynamic port for Render
+var port = Environment.GetEnvironmentVariable("PORT") ?? "5020";
+app.Run($"http://0.0.0.0:{port}");

@@ -28,4 +28,7 @@ public class ImportDetail
     /// Giá nhập
     /// </summary>
     public decimal Price { get; set; }
+
+    // Navigation: thiết bị cá thể được nhập theo dòng này
+    public ICollection<IndividualEquipment> IndividualEquipments { get; set; } = new List<IndividualEquipment>();
 }

@@ -108,4 +108,19 @@ public static class CustomPermissions
         public const string View = "Notifications.View";
         public const string Delete = "Notifications.Delete";
     }
+
+    public static class ServiceRequests
+    {
+        public const string View = "ServiceRequests.View";
+        public const string Create = "ServiceRequests.Create";
+        public const string Edit = "ServiceRequests.Edit";
+        public const string Delete = "ServiceRequests.Delete";
+    }
+
+    public static class Retrievals
+    {
+        public const string View = "Retrievals.View";
+        public const string Create = "Retrievals.Create";
+        public const string Delete = "Retrievals.Delete";
+    }
 }

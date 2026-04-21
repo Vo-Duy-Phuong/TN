@@ -1,6 +1,6 @@
 # QLK Warehouse Management System
 
-Hệ thống Quản lý Kho (QLK) - Giải pháp quản lý vật tư, thiết bị và quy trình nhập/xuất kho chuyên nghiệp cho bệnh viện.
+Hệ thống Quản lý Kho (QLK) - Giải pháp quản lý vật tư, thiết bị và quy trình nhập/xuất kho chuyên nghiệp.
 
 ## Mục lục
 

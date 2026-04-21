@@ -22,6 +22,46 @@ namespace QLK.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("QLK.Domain.Entities.AuditLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Changes")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EntityId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("EntityName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("MachineName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RemoteIpAddress")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("AuditLogs");
+                });
+
             modelBuilder.Entity("QLK.Domain.Entities.Brand", b =>
                 {
                     b.Property<Guid>("Id")
@@ -97,8 +137,18 @@ namespace QLK.Infrastructure.Migrations
                     b.Property<string>("Note")
                         .HasColumnType("text");
 
+                    b.Property<string>("ReceiptCode")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("TechnicianId")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("WarehouseId")
                         .HasColumnType("uuid");
@@ -157,6 +207,16 @@ namespace QLK.Infrastructure.Migrations
                     b.Property<string>("Note")
                         .HasColumnType("text");
 
+                    b.Property<string>("ReceiptCode")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<Guid>("WarehouseId")
                         .HasColumnType("uuid");
 
@@ -167,6 +227,73 @@ namespace QLK.Infrastructure.Migrations
                     b.HasIndex("WarehouseId");
 
                     b.ToTable("ImportReceipts");
+                });
+
+            modelBuilder.Entity("QLK.Domain.Entities.IndividualEquipment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ExportDetailId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ImportDetailId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("InstallationDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("MacAddress")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("RetrievalDetailId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SerialNumber")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("ServiceRequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("WarehouseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("WarrantyExpiry")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExportDetailId");
+
+                    b.HasIndex("ImportDetailId");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("RetrievalDetailId");
+
+                    b.HasIndex("ServiceRequestId");
+
+                    b.HasIndex("WarehouseId");
+
+                    b.ToTable("IndividualEquipments");
                 });
 
             modelBuilder.Entity("QLK.Domain.Entities.InventoryLog", b =>
@@ -305,11 +432,26 @@ namespace QLK.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
+                    b.Property<string>("EManualUrl")
+                        .HasColumnType("text");
+
+                    b.Property<int>("FaultyQuantity")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Image")
                         .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("MinQuantity")
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("Price")
                         .HasColumnType("numeric");
@@ -320,6 +462,13 @@ namespace QLK.Infrastructure.Migrations
 
                     b.Property<int>("Quantity")
                         .HasColumnType("integer");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
@@ -336,6 +485,9 @@ namespace QLK.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<decimal?>("Cost")
+                        .HasColumnType("numeric");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -351,11 +503,17 @@ namespace QLK.Infrastructure.Migrations
                     b.Property<Guid>("ProductId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("RepairNote")
+                        .HasColumnType("text");
+
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
                     b.Property<Guid>("TechnicianId")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
@@ -390,6 +548,70 @@ namespace QLK.Infrastructure.Migrations
                     b.HasIndex("CreatedBy");
 
                     b.ToTable("Reports");
+                });
+
+            modelBuilder.Entity("QLK.Domain.Entities.RetrievalDetail", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Condition")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("RetrievalReceiptId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("RetrievalReceiptId");
+
+                    b.ToTable("RetrievalDetails");
+                });
+
+            modelBuilder.Entity("QLK.Domain.Entities.RetrievalReceipt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ReceiptCode")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("RetrievalDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TechnicianId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("WarehouseId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TechnicianId");
+
+                    b.HasIndex("WarehouseId");
+
+                    b.ToTable("RetrievalReceipts");
                 });
 
             modelBuilder.Entity("QLK.Domain.Entities.Role", b =>
@@ -461,6 +683,94 @@ namespace QLK.Infrastructure.Migrations
                     b.ToTable("RolePermissions", (string)null);
                 });
 
+            modelBuilder.Entity("QLK.Domain.Entities.ServiceRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("AdminNote")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("AssignedTechnicianId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CustomerName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<double>("Latitude")
+                        .HasColumnType("double precision");
+
+                    b.Property<double>("Longitude")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("ProcessedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SelectedPackage")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ServiceType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssignedTechnicianId");
+
+                    b.HasIndex("ProcessedById");
+
+                    b.ToTable("ServiceRequests");
+                });
+
+            modelBuilder.Entity("QLK.Domain.Entities.ServiceRequestEquipment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ServiceRequestId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("ServiceRequestId");
+
+                    b.ToTable("ServiceRequestEquipments");
+                });
+
             modelBuilder.Entity("QLK.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -504,6 +814,12 @@ namespace QLK.Infrastructure.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(true);
 
+                    b.Property<double?>("LastLatitude")
+                        .HasColumnType("double precision");
+
+                    b.Property<double?>("LastLongitude")
+                        .HasColumnType("double precision");
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -521,6 +837,12 @@ namespace QLK.Infrastructure.Migrations
 
                     b.Property<Guid>("RoleId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("SecurityAnswerHash")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SecurityQuestion")
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -564,6 +886,16 @@ namespace QLK.Infrastructure.Migrations
                     b.HasIndex("ManagerId");
 
                     b.ToTable("Warehouses");
+                });
+
+            modelBuilder.Entity("QLK.Domain.Entities.AuditLog", b =>
+                {
+                    b.HasOne("QLK.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("QLK.Domain.Entities.ExportDetail", b =>
@@ -638,6 +970,52 @@ namespace QLK.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Creator");
+
+                    b.Navigation("Warehouse");
+                });
+
+            modelBuilder.Entity("QLK.Domain.Entities.IndividualEquipment", b =>
+                {
+                    b.HasOne("QLK.Domain.Entities.ExportDetail", "ExportDetail")
+                        .WithMany("IndividualEquipments")
+                        .HasForeignKey("ExportDetailId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("QLK.Domain.Entities.ImportDetail", "ImportDetail")
+                        .WithMany("IndividualEquipments")
+                        .HasForeignKey("ImportDetailId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("QLK.Domain.Entities.Product", "Product")
+                        .WithMany("IndividualEquipments")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QLK.Domain.Entities.RetrievalDetail", "RetrievalDetail")
+                        .WithMany("IndividualEquipments")
+                        .HasForeignKey("RetrievalDetailId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("QLK.Domain.Entities.ServiceRequest", "ServiceRequest")
+                        .WithMany()
+                        .HasForeignKey("ServiceRequestId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("QLK.Domain.Entities.Warehouse", "Warehouse")
+                        .WithMany()
+                        .HasForeignKey("WarehouseId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ExportDetail");
+
+                    b.Navigation("ImportDetail");
+
+                    b.Navigation("Product");
+
+                    b.Navigation("RetrievalDetail");
+
+                    b.Navigation("ServiceRequest");
 
                     b.Navigation("Warehouse");
                 });
@@ -721,6 +1099,44 @@ namespace QLK.Infrastructure.Migrations
                     b.Navigation("Creator");
                 });
 
+            modelBuilder.Entity("QLK.Domain.Entities.RetrievalDetail", b =>
+                {
+                    b.HasOne("QLK.Domain.Entities.Product", "Product")
+                        .WithMany("RetrievalDetails")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QLK.Domain.Entities.RetrievalReceipt", "RetrievalReceipt")
+                        .WithMany("RetrievalDetails")
+                        .HasForeignKey("RetrievalReceiptId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("RetrievalReceipt");
+                });
+
+            modelBuilder.Entity("QLK.Domain.Entities.RetrievalReceipt", b =>
+                {
+                    b.HasOne("QLK.Domain.Entities.User", "Technician")
+                        .WithMany("RetrievalReceipts")
+                        .HasForeignKey("TechnicianId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QLK.Domain.Entities.Warehouse", "Warehouse")
+                        .WithMany("RetrievalReceipts")
+                        .HasForeignKey("WarehouseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Technician");
+
+                    b.Navigation("Warehouse");
+                });
+
             modelBuilder.Entity("QLK.Domain.Entities.RolePermission", b =>
                 {
                     b.HasOne("QLK.Domain.Entities.Permission", "Permission")
@@ -738,6 +1154,42 @@ namespace QLK.Infrastructure.Migrations
                     b.Navigation("Permission");
 
                     b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("QLK.Domain.Entities.ServiceRequest", b =>
+                {
+                    b.HasOne("QLK.Domain.Entities.User", "AssignedTechnician")
+                        .WithMany()
+                        .HasForeignKey("AssignedTechnicianId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QLK.Domain.Entities.User", "ProcessedBy")
+                        .WithMany()
+                        .HasForeignKey("ProcessedById")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("AssignedTechnician");
+
+                    b.Navigation("ProcessedBy");
+                });
+
+            modelBuilder.Entity("QLK.Domain.Entities.ServiceRequestEquipment", b =>
+                {
+                    b.HasOne("QLK.Domain.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QLK.Domain.Entities.ServiceRequest", "ServiceRequest")
+                        .WithMany("EquipmentsUsed")
+                        .HasForeignKey("ServiceRequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("ServiceRequest");
                 });
 
             modelBuilder.Entity("QLK.Domain.Entities.User", b =>
@@ -772,9 +1224,19 @@ namespace QLK.Infrastructure.Migrations
                     b.Navigation("Products");
                 });
 
+            modelBuilder.Entity("QLK.Domain.Entities.ExportDetail", b =>
+                {
+                    b.Navigation("IndividualEquipments");
+                });
+
             modelBuilder.Entity("QLK.Domain.Entities.ExportReceipt", b =>
                 {
                     b.Navigation("ExportDetails");
+                });
+
+            modelBuilder.Entity("QLK.Domain.Entities.ImportDetail", b =>
+                {
+                    b.Navigation("IndividualEquipments");
                 });
 
             modelBuilder.Entity("QLK.Domain.Entities.ImportReceipt", b =>
@@ -793,9 +1255,23 @@ namespace QLK.Infrastructure.Migrations
 
                     b.Navigation("ImportDetails");
 
+                    b.Navigation("IndividualEquipments");
+
                     b.Navigation("InventoryLogs");
 
                     b.Navigation("Repairs");
+
+                    b.Navigation("RetrievalDetails");
+                });
+
+            modelBuilder.Entity("QLK.Domain.Entities.RetrievalDetail", b =>
+                {
+                    b.Navigation("IndividualEquipments");
+                });
+
+            modelBuilder.Entity("QLK.Domain.Entities.RetrievalReceipt", b =>
+                {
+                    b.Navigation("RetrievalDetails");
                 });
 
             modelBuilder.Entity("QLK.Domain.Entities.Role", b =>
@@ -803,6 +1279,11 @@ namespace QLK.Infrastructure.Migrations
                     b.Navigation("RolePermissions");
 
                     b.Navigation("Users");
+                });
+
+            modelBuilder.Entity("QLK.Domain.Entities.ServiceRequest", b =>
+                {
+                    b.Navigation("EquipmentsUsed");
                 });
 
             modelBuilder.Entity("QLK.Domain.Entities.User", b =>
@@ -820,6 +1301,8 @@ namespace QLK.Infrastructure.Migrations
                     b.Navigation("ManagedWarehouses");
 
                     b.Navigation("Notifications");
+
+                    b.Navigation("RetrievalReceipts");
                 });
 
             modelBuilder.Entity("QLK.Domain.Entities.Warehouse", b =>
@@ -827,6 +1310,8 @@ namespace QLK.Infrastructure.Migrations
                     b.Navigation("ExportReceipts");
 
                     b.Navigation("ImportReceipts");
+
+                    b.Navigation("RetrievalReceipts");
                 });
 #pragma warning restore 612, 618
         }

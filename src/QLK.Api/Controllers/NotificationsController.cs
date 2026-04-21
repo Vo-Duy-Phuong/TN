@@ -78,4 +78,22 @@ public class NotificationsController : ControllerBase
         await _notificationService.DeleteNotificationAsync(id, userId, ct);
         return NoContent();
     }
+
+    [HttpPost("test")]
+    [Authorize]
+    public async Task<IActionResult> SendTest(CancellationToken ct)
+    {
+        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdStr) || !Guid.TryParse(userIdStr, out var userId))
+            return Unauthorized();
+
+        await _notificationService.CreateAndSendAsync(new CreateNotificationDto(
+            userId,
+            "Thông báo thử nghiệm",
+            "Hệ thống thông báo của bạn đã hoạt động chính xác! 🚀",
+            QLK.Domain.Enums.NotificationType.Info
+        ), ct);
+
+        return Ok(new { message = "Test notification sent" });
+    }
 }

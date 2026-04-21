@@ -15,6 +15,7 @@ public class SignalRNotificationSender : INotificationSender
 
     public async Task SendToUserAsync(string userId, object notification)
     {
+        Console.WriteLine($"[SignalR] Sending notification to User {userId}");
         await _hubContext.Clients.User(userId).SendAsync("ReceiveNotification", notification);
     }
 

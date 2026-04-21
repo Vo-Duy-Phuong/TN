@@ -27,6 +27,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<ImportDetail> ImportDetails => Set<ImportDetail>();
     public DbSet<ExportReceipt> ExportReceipts => Set<ExportReceipt>();
     public DbSet<ExportDetail> ExportDetails => Set<ExportDetail>();
+    public DbSet<RetrievalReceipt> RetrievalReceipts => Set<RetrievalReceipt>();
+    public DbSet<RetrievalDetail> RetrievalDetails => Set<RetrievalDetail>();
 
     // Sửa chữa & Báo cáo
     public DbSet<Repair> Repairs => Set<Repair>();
@@ -35,6 +37,12 @@ public class ApplicationDbContext : DbContext
 
     // Thông báo
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<IndividualEquipment> IndividualEquipments => Set<IndividualEquipment>();
+    
+    // Dịch vụ khách hàng
+    public DbSet<ServiceRequest> ServiceRequests => Set<ServiceRequest>();
+    public DbSet<ServiceRequestEquipment> ServiceRequestEquipments => Set<ServiceRequestEquipment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -158,6 +166,32 @@ public class ApplicationDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
+        // RetrievalReceipt
+        modelBuilder.Entity<RetrievalReceipt>(entity =>
+        {
+            entity.HasOne(rr => rr.Warehouse)
+                .WithMany(w => w.RetrievalReceipts)
+                .HasForeignKey(rr => rr.WarehouseId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(rr => rr.Technician)
+                .WithMany(u => u.RetrievalReceipts)
+                .HasForeignKey(rr => rr.TechnicianId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // RetrievalDetail
+        modelBuilder.Entity<RetrievalDetail>(entity =>
+        {
+            entity.HasOne(rd => rd.RetrievalReceipt)
+                .WithMany(rr => rr.RetrievalDetails)
+                .HasForeignKey(rd => rd.RetrievalReceiptId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(rd => rd.Product)
+                .WithMany(p => p.RetrievalDetails)
+                .HasForeignKey(rd => rd.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
         // Repair
         modelBuilder.Entity<Repair>(entity =>
         {
@@ -200,6 +234,77 @@ public class ApplicationDbContext : DbContext
                 .WithMany(u => u.Notifications)
                 .HasForeignKey(n => n.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // AuditLog
+        modelBuilder.Entity<AuditLog>(entity =>
+        {
+            entity.HasOne(a => a.User)
+                .WithMany()
+                .HasForeignKey(a => a.UserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // ServiceRequest
+        modelBuilder.Entity<ServiceRequest>(entity =>
+        {
+            entity.HasOne(sr => sr.AssignedTechnician)
+                .WithMany()
+                .HasForeignKey(sr => sr.AssignedTechnicianId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(sr => sr.ProcessedBy)
+                .WithMany()
+                .HasForeignKey(sr => sr.ProcessedById)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ServiceRequestEquipment
+        modelBuilder.Entity<ServiceRequestEquipment>(entity =>
+        {
+            entity.HasOne(sre => sre.ServiceRequest)
+                .WithMany(sr => sr.EquipmentsUsed)
+                .HasForeignKey(sre => sre.ServiceRequestId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(sre => sre.Product)
+                .WithMany()
+                .HasForeignKey(sre => sre.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // IndividualEquipment
+        modelBuilder.Entity<IndividualEquipment>(entity =>
+        {
+            entity.HasOne(e => e.Product)
+                .WithMany(p => p.IndividualEquipments)
+                .HasForeignKey(e => e.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.Warehouse)
+                .WithMany()
+                .HasForeignKey(e => e.WarehouseId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.ImportDetail)
+                .WithMany(id => id.IndividualEquipments)
+                .HasForeignKey(e => e.ImportDetailId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.ExportDetail)
+                .WithMany(ed => ed.IndividualEquipments)
+                .HasForeignKey(e => e.ExportDetailId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.RetrievalDetail)
+                .WithMany(rd => rd.IndividualEquipments)
+                .HasForeignKey(e => e.RetrievalDetailId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.ServiceRequest)
+                .WithMany()
+                .HasForeignKey(e => e.ServiceRequestId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }

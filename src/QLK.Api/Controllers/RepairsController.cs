@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using QLK.Application.DTOs;
 using QLK.Application.DTOs.Repair;
 using QLK.Application.Services;
 using QLK.Domain.Constants;
@@ -20,11 +21,10 @@ public class RepairsController : ControllerBase
 
     [HttpGet]
     [Authorize(CustomPermissions.Repairs.View)]
-    public async Task<ActionResult<IEnumerable<RepairDto>>> GetRepairs([FromQuery] RepairFilterDto filter, CancellationToken ct)
+    public async Task<ActionResult<PagedResult<RepairDto>>> GetRepairs([FromQuery] RepairFilterDto filter, CancellationToken ct)
     {
         var (items, totalCount) = await _repairService.GetRepairsAsync(filter, ct);
-        Response.Headers.Add("X-Total-Count", totalCount.ToString());
-        return Ok(items);
+        return Ok(new PagedResult<RepairDto>(items, totalCount));
     }
 
     [HttpGet("{id}")]
@@ -38,7 +38,7 @@ public class RepairsController : ControllerBase
 
     [HttpPost]
     [Authorize(CustomPermissions.Repairs.Create)]
-    public async Task<ActionResult<RepairDto>> CreateRepair([FromBody] CreateRepairDto dto, CancellationToken ct)
+    public async Task<ActionResult<RepairDto>> CreateRepair([FromForm] CreateRepairDto dto, CancellationToken ct)
     {
         var repair = await _repairService.CreateRepairAsync(dto, ct);
         return CreatedAtAction(nameof(GetRepair), new { id = repair.Id }, repair);
@@ -46,7 +46,7 @@ public class RepairsController : ControllerBase
 
     [HttpPut("{id}")]
     [Authorize(CustomPermissions.Repairs.Edit)]
-    public async Task<IActionResult> UpdateRepair(Guid id, [FromBody] UpdateRepairDto dto, CancellationToken ct)
+    public async Task<IActionResult> UpdateRepair(Guid id, [FromForm] UpdateRepairDto dto, CancellationToken ct)
     {
         await _repairService.UpdateRepairAsync(id, dto, ct);
         return NoContent();

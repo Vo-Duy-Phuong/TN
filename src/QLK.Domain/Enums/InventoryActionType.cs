@@ -15,5 +15,8 @@ public enum InventoryActionType
     Repair = 3,
 
     /// <summary>Điều chỉnh thủ công</summary>
-    Adjustment = 4
+    Adjustment = 4,
+
+    /// <summary>Thu hồi thiết bị</summary>
+    Retrieval = 5
 }

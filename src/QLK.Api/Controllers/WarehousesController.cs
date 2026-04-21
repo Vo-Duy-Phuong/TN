@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using QLK.Application.DTOs;
 using QLK.Application.DTOs.Warehouse;
 using QLK.Application.Services;
 using QLK.Domain.Constants;
@@ -20,10 +21,10 @@ public class WarehousesController : ControllerBase
 
     [HttpGet]
     [Authorize(CustomPermissions.Warehouses.View)]
-    public async Task<ActionResult<IEnumerable<WarehouseDto>>> GetWarehouses(CancellationToken ct)
+    public async Task<ActionResult<PagedResult<WarehouseDto>>> GetWarehouses([FromQuery] WarehouseFilterDto filter, CancellationToken ct)
     {
-        var items = await _warehouseService.GetWarehousesAsync(ct);
-        return Ok(items);
+        var (items, totalCount) = await _warehouseService.GetWarehousesAsync(filter, ct);
+        return Ok(new PagedResult<WarehouseDto>(items, totalCount));
     }
 
     [HttpGet("{id}")]

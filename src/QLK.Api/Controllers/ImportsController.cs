@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using QLK.Application.DTOs;
 using QLK.Application.DTOs.Import;
 using QLK.Application.Services;
 using QLK.Domain.Constants;
@@ -20,11 +21,10 @@ public class ImportsController : ControllerBase
 
     [HttpGet]
     [Authorize(CustomPermissions.Imports.View)]
-    public async Task<ActionResult<IEnumerable<ImportReceiptDto>>> GetImports([FromQuery] ImportFilterDto filter, CancellationToken ct)
+    public async Task<ActionResult<PagedResult<ImportReceiptDto>>> GetImports([FromQuery] ImportFilterDto filter, CancellationToken ct)
     {
         var (items, totalCount) = await _importService.GetImportsAsync(filter, ct);
-        Response.Headers.Add("X-Total-Count", totalCount.ToString());
-        return Ok(items);
+        return Ok(new PagedResult<ImportReceiptDto>(items, totalCount));
     }
 
     [HttpGet("{id}")]

@@ -41,15 +41,25 @@ public class User
     /// <summary>Thời hạn mã reset</summary>
     public DateTime? PasswordResetCodeExpiry { get; set; }
 
+    /// <summary>Câu hỏi bảo mật</summary>
+    public string? SecurityQuestion { get; set; }
+
+    /// <summary>Câu trả lời bảo mật (đã hash)</summary>
+    public string? SecurityAnswerHash { get; set; }
+
     public bool IsDeleted { get; set; } = false;
     public DateTime? DeletedAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
 
+    public double? LastLatitude { get; set; }
+    public double? LastLongitude { get; set; }
+
     // Navigation properties
     public ICollection<Warehouse> ManagedWarehouses { get; set; } = new List<Warehouse>();
     public ICollection<ImportReceipt> CreatedImportReceipts { get; set; } = new List<ImportReceipt>();
     public ICollection<ExportReceipt> CreatedExportReceipts { get; set; } = new List<ExportReceipt>();
+    public ICollection<RetrievalReceipt> RetrievalReceipts { get; set; } = new List<RetrievalReceipt>();
     public ICollection<Repair> AssignedRepairs { get; set; } = new List<Repair>();
     public ICollection<InventoryLog> InventoryLogs { get; set; } = new List<InventoryLog>();
     public ICollection<Report> CreatedReports { get; set; } = new List<Report>();

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using QLK.Application.DTOs;
 using QLK.Application.DTOs.Export;
 using QLK.Application.Services;
 using QLK.Domain.Constants;
@@ -21,11 +22,10 @@ public class ExportsController : ControllerBase
 
     [HttpGet]
     [Authorize(CustomPermissions.Exports.View)]
-    public async Task<ActionResult<IEnumerable<ExportReceiptDto>>> GetExports([FromQuery] ExportFilterDto filter, CancellationToken ct)
+    public async Task<ActionResult<PagedResult<ExportReceiptDto>>> GetExports([FromQuery] ExportFilterDto filter, CancellationToken ct)
     {
         var (items, totalCount) = await _exportService.GetExportsAsync(filter, ct);
-        Response.Headers.Add("X-Total-Count", totalCount.ToString());
-        return Ok(items);
+        return Ok(new PagedResult<ExportReceiptDto>(items, totalCount));
     }
 
     [HttpGet("{id}")]

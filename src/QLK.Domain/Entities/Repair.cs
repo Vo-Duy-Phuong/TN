@@ -9,37 +9,32 @@ public class Repair
 {
     public Guid Id { get; set; }
     
-    /// <summary>
-    /// ID sản phẩm cần sửa (FK to Product table)
-    /// </summary>
+    /// <summary>ID sản phẩm cần sửa (FK to Product table)</summary>
     public Guid ProductId { get; set; }
     public Product Product { get; set; } = null!;
     
-    /// <summary>
-    /// ID kỹ thuật viên sửa chữa (FK to User table)
-    /// </summary>
+    /// <summary>ID kỹ thuật viên sửa chữa (FK to User table)</summary>
     public Guid TechnicianId { get; set; }
     public User Technician { get; set; } = null!;
     
-    /// <summary>
-    /// Mô tả lỗi/vấn đề
-    /// </summary>
+    /// <summary>Mô tả lỗi/vấn đề</summary>
     public string? Problem { get; set; }
     
-    /// <summary>
-    /// Ảnh trước khi sửa
-    /// </summary>
+    /// <summary>Ghi chú nội bộ của kỹ thuật viên</summary>
+    public string? RepairNote { get; set; }
+    
+    /// <summary>Chi phí sửa chữa</summary>
+    public decimal? Cost { get; set; }
+    
+    /// <summary>Ảnh trước khi sửa</summary>
     public string? ImageBefore { get; set; }
     
-    /// <summary>
-    /// Ảnh sau khi sửa
-    /// </summary>
+    /// <summary>Ảnh sau khi sửa</summary>
     public string? ImageAfter { get; set; }
     
-    /// <summary>
-    /// Trạng thái sửa chữa
-    /// </summary>
+    /// <summary>Trạng thái sửa chữa</summary>
     public RepairStatus Status { get; set; }
     
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? UpdatedAt { get; set; }
 }

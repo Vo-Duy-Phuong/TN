@@ -23,4 +23,7 @@ public class ExportDetail
     /// Số lượng xuất
     /// </summary>
     public int Quantity { get; set; }
+
+    // Navigation: thiết bị cá thể được xuất theo dòng này
+    public ICollection<IndividualEquipment> IndividualEquipments { get; set; } = new List<IndividualEquipment>();
 }
