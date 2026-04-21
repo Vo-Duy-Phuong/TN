@@ -123,14 +123,15 @@ builder.Services.AddScoped<IGISService, GISService>();
 builder.Services.AddHttpClient<IGeocodingService, GeocodingService>();
 builder.Services.AddHttpClient<IAIService, GeminiService>();
 
-// Storage - Switch between MinIO and Cloudinary
+// Storage - Hierarchical Fallback: Cloudinary -> Minio (Local) -> LocalStorage (Prod Fallback)
 if (!string.IsNullOrEmpty(builder.Configuration["Cloudinary:CloudName"]))
 {
     builder.Services.AddScoped<IStorageService, CloudinaryService>();
     Console.WriteLine("Using Cloudinary for storage.");
 }
-else
+else if (builder.Environment.IsDevelopment())
 {
+    // Local development usually has MinIO via Docker Compose
     builder.Services.AddScoped<IMinioClient>(sp =>
     {
         var minioSettings = builder.Configuration.GetSection("MinioSettings");
@@ -142,6 +143,12 @@ else
     });
     builder.Services.AddScoped<IStorageService, MinioService>();
     Console.WriteLine("Using MinIO for storage.");
+}
+else
+{
+    // Production fallback on Render when no Cloudinary is provided
+    builder.Services.AddScoped<IStorageService, LocalStorageService>();
+    Console.WriteLine("Using Local Storage for storage (Files will be ephemeral on Render).");
 }
 
 builder.Services.AddScoped<INotificationSender, SignalRNotificationSender>();
