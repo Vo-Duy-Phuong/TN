@@ -82,6 +82,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, activePage, onNavigate 
   
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isSidebarMobileOpen, setIsSidebarMobileOpen] = useState(false);
   const [isGlobalScannerOpen, setIsGlobalScannerOpen] = useState(false);
   const [scannedProduct, setScannedProduct] = useState<Product | null>(null);
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
@@ -262,7 +263,22 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, activePage, onNavigate 
         }
       `}</style>
       
-      <div className="sidebar" style={{ boxShadow: 'var(--shadow-md)', zIndex: 100 }}>
+      {/* Mobile Sidebar Overlay */}
+      {isSidebarMobileOpen && (
+        <div 
+          onClick={() => setIsSidebarMobileOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.3)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 999,
+          }}
+          className="animate-fade-in"
+        />
+      )}
+
+      <div className={`sidebar ${isSidebarMobileOpen ? 'open' : ''}`} style={{ boxShadow: 'var(--shadow-md)', zIndex: 1000 }}>
         <div 
           style={{ padding: '24px 20px', display: 'flex', alignItems: 'center', gap: '14px', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
           onClick={() => onNavigate('dashboard')}
@@ -316,7 +332,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, activePage, onNavigate 
             icon={<Navigation size={20} />} 
             label="Bản đồ điều phối" 
             active={activePage === 'gis'} 
-            onClick={() => onNavigate('gis')} 
+            onClick={() => {
+              onNavigate('gis');
+              setIsSidebarMobileOpen(false);
+            }} 
           />
 
           <div style={{ padding: '20px 20px 8px', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.5px' }}>Dịch vụ khách hàng</div>
@@ -446,17 +465,34 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, activePage, onNavigate 
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'center', 
-          padding: '20px 40px',
+          padding: '16px 20px',
           background: 'rgba(240, 244, 249, 0.8)',
           backdropFilter: 'blur(12px)',
           borderBottom: '1px solid var(--border)',
-          marginBottom: '20px'
+          marginBottom: '20px',
+          gap: '12px'
         }}>
-          <div className="search-wrapper" style={{ flex: 1, maxWidth: '600px' }}>
+          {/* Mobile Menu Toggle */}
+          <div 
+            className="header-btn mobile-only" 
+            onClick={() => setIsSidebarMobileOpen(true)}
+            style={{ display: 'none' }}
+          >
+            <Menu size={20} />
+          </div>
+          <style>{`
+            @media (max-width: 1024px) {
+              .mobile-only { display: flex !important; }
+              .header-search-wrapper { max-width: 100% !important; }
+              .search-shortcut span { display: none !important; }
+              header { padding: 12px 16px !important; }
+            }
+          `}</style>
+          <div className="search-wrapper header-search-wrapper" style={{ flex: 1, maxWidth: '600px' }}>
             <Search className="search-icon" size={18} />
             <input 
               type="text" 
-              placeholder="Tìm kiếm sản phẩm, phiếu kho, người dùng... (Alt + S)" 
+              placeholder="Tìm kiếm..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="search-field"
