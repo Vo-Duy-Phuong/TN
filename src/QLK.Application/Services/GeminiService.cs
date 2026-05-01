@@ -108,27 +108,34 @@ CÂU HỎI CỦA NGƯỜI DÙNG: {message}
         // Iterate through all provided API Keys
         foreach (var key in _apiKeys)
         {
+            var keyDisplay = key.Length > 8 ? $"...{key.Substring(key.Length - 5)}" : "InvalidKey";
             var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={key}";
+            
             try
             {
-                Console.WriteLine($"[Gemini Assistant] Trying with key ending in ...{key.Substring(Math.Max(0, key.Length - 5))} and model {_model}");
+                Console.WriteLine($"[Gemini Assistant] Attempting with key: {keyDisplay}");
                 response = await _httpClient.PostAsJsonAsync(url, requestBody);
 
-                if (response.IsSuccessStatusCode) break;
+                if (response.IsSuccessStatusCode) 
+                {
+                    Console.WriteLine($"[Gemini Assistant] Success with key: {keyDisplay}");
+                    break;
+                }
 
                 var statusCode = (int)response.StatusCode;
-                lastError = await response.Content.ReadAsStringAsync();
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"[Gemini Warning] Key {keyDisplay} failed with Status: {statusCode}. Error: {errorContent}");
                 
-                // If it's a quota issue (429), try next key
-                if (statusCode == 429)
+                // If it's a quota issue (429) or Auth issue (401), try next key
+                if (statusCode == 429 || statusCode == 401)
                 {
-                    Console.WriteLine($"[Gemini Warning] Key exhausted. Trying next key...");
                     continue;
                 }
 
                 // If it's a model issue (404/400), try model fallback with CURRENT key
                 if (statusCode == 404 || statusCode == 400)
                 {
+                    Console.WriteLine($"[Gemini Info] Model {_model} might not be available for this key. Trying fallback models...");
                     var listUrl = $"https://generativelanguage.googleapis.com/v1beta/models?key={key}";
                     var listResponse = await _httpClient.GetAsync(listUrl);
                     if (listResponse.IsSuccessStatusCode)
@@ -142,28 +149,32 @@ CÂU HỎI CỦA NGƯỜI DÙNG: {message}
                                 if (string.IsNullOrEmpty(mName) || mName == _model || 
                                     mName.StartsWith("gemini-2.5") || mName.Contains("gemma")) continue;
                                 
+                                Console.WriteLine($"[Gemini Info] Trying fallback model: {mName} with key {keyDisplay}");
                                 var retryUrl = $"https://generativelanguage.googleapis.com/v1beta/models/{mName}:generateContent?key={key}";
                                 response = await _httpClient.PostAsJsonAsync(retryUrl, requestBody);
                                 if (response.IsSuccessStatusCode) break;
                             }
                         }
                     }
-                    if (response.IsSuccessStatusCode) break;
+                    if (response != null && response.IsSuccessStatusCode) break;
                 }
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[Gemini Error] Exception with key {keyDisplay}: {ex.Message}");
                 lastError = ex.Message;
             }
         }
 
         if (response == null || !response.IsSuccessStatusCode)
         {
+            Console.WriteLine("[Gemini Critical] ALL KEYS EXHAUSTED OR FAILED.");
             return new AIResponseDto 
             { 
                 Text = "Hệ thống AI hiện đang bị quá tải hoặc đạt giới hạn truy cập. Vui lòng quay lại sau ít phút hoặc thêm API Key dự phòng để tiếp tục." 
             };
         }
+
 
             var jsonStr = await response.Content.ReadAsStringAsync();
             try
