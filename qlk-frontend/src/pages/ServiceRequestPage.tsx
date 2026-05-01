@@ -82,6 +82,10 @@ const ServiceRequestPage: React.FC = () => {
   const handleProcess = async (status: ServiceStatus) => {
     if (!selectedRequest) return;
     setIsProcessing(true);
+    
+    // OPTIMISTIC UI: Close modal immediately so user doesn't have to wait
+    setIsModalOpen(false);
+
     try {
       await serviceRequestApi.process(selectedRequest.id, {
         status,
@@ -89,19 +93,18 @@ const ServiceRequestPage: React.FC = () => {
         assignedTechnicianId: assignTechId || undefined
       });
       
-      // Close modal immediately for better UX
-      setIsModalOpen(false);
+      // Clear states
       setSelectedRequest(null);
       setAdminNote('');
       setAssignTechId('');
       
-      // Force refresh data after a tiny delay to ensure DB consistency
-      setTimeout(() => {
-        fetchData();
-      }, 300);
+      // Refresh data to show changes
+      fetchData();
 
     } catch (error) {
       console.error('Process error:', error);
+      // Re-open modal if failed so user can try again
+      setIsModalOpen(true);
       alert('Thao tác thất bại. Vui lòng kiểm tra lại kết nối.');
     } finally {
       setIsProcessing(false);
