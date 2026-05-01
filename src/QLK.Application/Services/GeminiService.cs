@@ -10,11 +10,6 @@ using System.Text.RegularExpressions;
 
 namespace QLK.Application.Services
 {
-    public interface IAIService
-    {
-        Task<AIResponseDto> ProcessQueryAsync(string message, string? context = null);
-    }
-
     public class GeminiService : IAIService
     {
         private readonly ApplicationDbContext _context;
