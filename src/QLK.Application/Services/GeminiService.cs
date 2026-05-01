@@ -1,10 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using QLK.Application.DTOs.AI;
 using QLK.Infrastructure.Data;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using QLK.Domain.Entities;
+using System.Text.RegularExpressions;
 
 namespace QLK.Application.Services
 {
