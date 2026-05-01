@@ -88,13 +88,21 @@ const ServiceRequestPage: React.FC = () => {
         adminNote,
         assignedTechnicianId: assignTechId || undefined
       });
+      
+      // Close modal immediately for better UX
       setIsModalOpen(false);
       setSelectedRequest(null);
       setAdminNote('');
       setAssignTechId('');
-      fetchData();
+      
+      // Force refresh data after a tiny delay to ensure DB consistency
+      setTimeout(() => {
+        fetchData();
+      }, 300);
+
     } catch (error) {
-      alert('Thao tác thất bại');
+      console.error('Process error:', error);
+      alert('Thao tác thất bại. Vui lòng kiểm tra lại kết nối.');
     } finally {
       setIsProcessing(false);
     }
