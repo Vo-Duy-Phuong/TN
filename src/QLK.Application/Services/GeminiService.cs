@@ -27,8 +27,40 @@ namespace QLK.Application.Services
 
             try
             {
-                // 1. Câu hỏi về Số lượng Sản phẩm / Tồn kho
-                if ((msg.Contains("bao nhiêu") || msg.Contains("thống kê")) && (msg.Contains("sản phẩm") || msg.Contains("hàng")))
+                // 1. Câu hỏi về Thương hiệu (Brands)
+                if (msg.Contains("thương hiệu") || msg.Contains("hãng"))
+                {
+                    var brands = await _context.Brands.Select(b => b.BrandName).ToListAsync();
+                    response = $"Hệ thống hiện có **{brands.Count}** thương hiệu: {string.Join(", ", brands)}.";
+                }
+                // 2. Câu hỏi về một dòng thiết bị cụ thể (Ví dụ: iGate, ZTE, Modem...)
+                else if (msg.Contains("thiết bị") || msg.Contains("máy") || msg.Contains("igate") || msg.Contains("zte") || msg.Contains("huawei"))
+                {
+                    // Trích xuất từ khóa tìm kiếm (bỏ chữ "có bao nhiêu thiết bị")
+                    var searchKey = msg.Replace("có", "").Replace("bao", "").Replace("nhiêu", "").Replace("thiết", "").Replace("bị", "").Trim();
+                    
+                    var products = await _context.Products
+                        .Where(p => !p.IsDeleted && (p.ProductName.ToLower().Contains(searchKey) || p.Description.ToLower().Contains(searchKey)))
+                        .ToListAsync();
+                    
+                    if (products.Any())
+                    {
+                        var totalQty = products.Sum(p => p.Quantity);
+                        response = $"Tìm thấy **{products.Count}** loại thiết bị liên quan đến '{searchKey}' với tổng tồn kho là **{totalQty}** chiếc. \n\nChi tiết: {string.Join(", ", products.Select(p => p.ProductName + " [" + p.Quantity + "]"))}";
+                    }
+                    else
+                    {
+                        response = $"Tôi không tìm thấy thiết bị nào có tên hoặc mô tả là '{searchKey}' trong kho hàng.";
+                    }
+                }
+                // 3. Câu hỏi về Kho hàng (Tách biệt với sản phẩm)
+                else if (msg.Contains("kho hàng") || msg.Contains("danh sách kho"))
+                {
+                    var warehouses = await _context.Warehouses.Select(w => w.WarehouseName).ToListAsync();
+                    response = $"Hệ thống có **{warehouses.Count}** kho hàng: {string.Join(", ", warehouses)}.";
+                }
+                // 4. Câu hỏi về Tổng số lượng Sản phẩm / Tồn kho chung
+                else if ((msg.Contains("bao nhiêu") || msg.Contains("thống kê")) && (msg.Contains("sản phẩm") || msg.Contains("hàng")))
                 {
                     var totalProducts = await _context.Products.CountAsync(p => !p.IsDeleted);
                     var totalStock = await _context.Products.Where(p => !p.IsDeleted).SumAsync(p => p.Quantity);
@@ -36,45 +68,31 @@ namespace QLK.Application.Services
                     
                     response = $"Hệ thống hiện đang quản lý **{totalProducts}** loại sản phẩm với tổng số lượng tồn kho là **{totalStock}** đơn vị. \n\n⚠️ Lưu ý: Có **{lowStock}** sản phẩm đang ở mức báo động (sắp hết hàng).";
                 }
-                // 2. Câu hỏi về Yêu cầu dịch vụ / Triage
+                // 5. Câu hỏi về Yêu cầu dịch vụ
                 else if (msg.Contains("yêu cầu") || msg.Contains("đăng ký") || msg.Contains("khách hàng"))
                 {
                     var pending = await _context.ServiceRequests.CountAsync(s => s.Status == ServiceStatus.Pending);
                     var processing = await _context.ServiceRequests.CountAsync(s => s.Status == ServiceStatus.Approved || s.Status == ServiceStatus.Assigned);
                     var completedToday = await _context.ServiceRequests.CountAsync(s => s.Status == ServiceStatus.Completed && s.UpdatedAt >= DateTime.Today);
 
-                    response = $"📊 **Thống kê yêu cầu dịch vụ:**\n- Chờ xử lý: **{pending}** yêu cầu mới.\n- Đang triển khai: **{processing}** yêu cầu.\n- Đã hoàn thành hôm nay: **{completedToday}** yêu cầu.\n\nBạn có muốn xem chi tiết danh sách yêu cầu mới nhất không?";
+                    response = $"📊 **Thống kê yêu cầu dịch vụ:**\n- Chờ xử lý: **{pending}** yêu cầu mới.\n- Đang triển khai: **{processing}** yêu cầu.\n- Đã hoàn thành hôm nay: **{completedToday}** yêu cầu.";
                 }
-                // 3. Câu hỏi về Kỹ thuật viên
+                // 6. Câu hỏi về Kỹ thuật viên
                 else if (msg.Contains("kỹ thuật viên") || msg.Contains("nhân viên") || msg.Contains("ktv"))
                 {
                     var totalTechs = await _context.Users.Include(u => u.Role).CountAsync(u => u.Role.Code == "TECHNICIAN" && !u.IsDeleted);
                     var busyTechs = await _context.ServiceRequests.Where(s => s.Status == ServiceStatus.Approved || s.Status == ServiceStatus.Assigned).Select(s => s.AssignedTechnicianId).Distinct().CountAsync();
                     
-                    response = $"Hiện có **{totalTechs}** kỹ thuật viên trong hệ thống. Trong đó có **{busyTechs}** người đang thực hiện nhiệm vụ tại hiện trường. Bạn có thể kiểm tra vị trí của họ trên Bản đồ GIS.";
+                    response = $"Hiện có **{totalTechs}** kỹ thuật viên. Trong đó có **{busyTechs}** người đang bận xử lý yêu cầu khách hàng.";
                 }
-                // 4. Câu hỏi về Kho hàng
-                else if (msg.Contains("kho"))
-                {
-                    var warehouses = await _context.Warehouses.Select(w => w.WarehouseName).ToListAsync();
-                    response = $"Hệ thống có **{warehouses.Count}** kho chính: {string.Join(", ", warehouses)}. Mỗi kho đều được giám sát tồn kho thời gian thực.";
-                }
-                // 5. Câu hỏi về Sửa chữa / Bảo trì
-                else if (msg.Contains("sửa chữa") || msg.Contains("bảo trì") || msg.Contains("hỏng"))
-                {
-                    var repairing = await _context.Repairs.CountAsync(r => r.Status == RepairStatus.Repairing || r.Status == RepairStatus.Pending);
-                    response = $"Hiện có **{repairing}** thiết bị đang trong quá trình sửa chữa hoặc bảo trì định kỳ.";
-                }
-
-
-                // 6. Câu chào hỏi / Mặc định
+                // 7. Câu chào / Mặc định
                 else if (msg.Contains("chào") || msg.Contains("hello") || msg.Contains("hi"))
                 {
-                    response = "Xin chào! Tôi là Trợ lý Thông minh VNPT. Tôi có thể giúp bạn thống kê kho hàng, kiểm tra yêu cầu dịch vụ hoặc theo dõi kỹ thuật viên. Bạn muốn biết thông tin gì ạ?";
+                    response = "Xin chào! Tôi là Trợ lý Thông minh VNPT. Tôi có thể giúp bạn kiểm tra tồn kho (ví dụ: 'tồn kho iGate'), xem yêu cầu dịch vụ hoặc quản lý kỹ thuật viên. Bạn cần tôi hỗ trợ gì?";
                 }
                 else
                 {
-                    response = "Tôi hiểu bạn đang quan tâm đến hệ thống. Bạn có thể hỏi tôi về: \n- Số lượng tồn kho sản phẩm.\n- Tình trạng các yêu cầu dịch vụ.\n- Danh sách kỹ thuật viên.\n- Các thiết bị đang sửa chữa.\n\nTôi luôn sẵn sàng hỗ trợ!";
+                    response = "Tôi hiểu bạn đang quan tâm đến hệ thống. Bạn có thể hỏi tôi về: \n- Tồn kho theo tên thiết bị (ví dụ: 'có bao nhiêu iGate').\n- Thống kê thương hiệu, kho hàng.\n- Tình trạng yêu cầu dịch vụ.\n- Kỹ thuật viên.\n\nTôi luôn sẵn sàng!";
                 }
             }
             catch (Exception ex)
@@ -86,3 +104,4 @@ namespace QLK.Application.Services
         }
     }
 }
+
