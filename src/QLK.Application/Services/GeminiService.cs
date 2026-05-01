@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using QLK.Application.DTOs.AI;
 using QLK.Infrastructure.Data;
 using QLK.Domain.Entities;
+using QLK.Domain.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -38,9 +39,9 @@ namespace QLK.Application.Services
                 // 2. Câu hỏi về Yêu cầu dịch vụ / Triage
                 else if (msg.Contains("yêu cầu") || msg.Contains("đăng ký") || msg.Contains("khách hàng"))
                 {
-                    var pending = await _context.ServiceRequests.CountAsync(s => s.Status == 0);
-                    var processing = await _context.ServiceRequests.CountAsync(s => s.Status == 1 || s.Status == 2);
-                    var completedToday = await _context.ServiceRequests.CountAsync(s => s.Status == 3 && s.UpdatedAt >= DateTime.Today);
+                    var pending = await _context.ServiceRequests.CountAsync(s => s.Status == ServiceStatus.New);
+                    var processing = await _context.ServiceRequests.CountAsync(s => s.Status == ServiceStatus.Assigned || s.Status == ServiceStatus.Processing);
+                    var completedToday = await _context.ServiceRequests.CountAsync(s => s.Status == ServiceStatus.Completed && s.UpdatedAt >= DateTime.Today);
 
                     response = $"📊 **Thống kê yêu cầu dịch vụ:**\n- Chờ xử lý: **{pending}** yêu cầu mới.\n- Đang triển khai: **{processing}** yêu cầu.\n- Đã hoàn thành hôm nay: **{completedToday}** yêu cầu.\n\nBạn có muốn xem chi tiết danh sách yêu cầu mới nhất không?";
                 }
@@ -48,7 +49,7 @@ namespace QLK.Application.Services
                 else if (msg.Contains("kỹ thuật viên") || msg.Contains("nhân viên") || msg.Contains("ktv"))
                 {
                     var totalTechs = await _context.Users.Include(u => u.Role).CountAsync(u => u.Role.Code == "TECHNICIAN" && !u.IsDeleted);
-                    var busyTechs = await _context.ServiceRequests.Where(s => s.Status == 1 || s.Status == 2).Select(s => s.AssignedTechnicianId).Distinct().CountAsync();
+                    var busyTechs = await _context.ServiceRequests.Where(s => s.Status == ServiceStatus.Assigned || s.Status == ServiceStatus.Processing).Select(s => s.AssignedTechnicianId).Distinct().CountAsync();
                     
                     response = $"Hiện có **{totalTechs}** kỹ thuật viên trong hệ thống. Trong đó có **{busyTechs}** người đang thực hiện nhiệm vụ tại hiện trường. Bạn có thể kiểm tra vị trí của họ trên Bản đồ GIS.";
                 }
@@ -61,9 +62,10 @@ namespace QLK.Application.Services
                 // 5. Câu hỏi về Sửa chữa / Bảo trì
                 else if (msg.Contains("sửa chữa") || msg.Contains("bảo trì") || msg.Contains("hỏng"))
                 {
-                    var repairing = await _context.Repairs.CountAsync(r => r.Status == 0 || r.Status == 1);
+                    var repairing = await _context.Repairs.CountAsync(r => r.Status == RepairStatus.Repairing || r.Status == RepairStatus.Pending);
                     response = $"Hiện có **{repairing}** thiết bị đang trong quá trình sửa chữa hoặc bảo trì định kỳ.";
                 }
+
                 // 6. Câu chào hỏi / Mặc định
                 else if (msg.Contains("chào") || msg.Contains("hello") || msg.Contains("hi"))
                 {
