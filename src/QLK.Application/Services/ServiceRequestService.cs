@@ -8,6 +8,7 @@ using QLK.Application.DTOs.Notifications;
 using System.Linq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace QLK.Application.Services;
 
