@@ -19,6 +19,17 @@ public class TechnicianZonesController : ControllerBase
     }
 
     /// <summary>
+    /// Kiểm tra kết nối API (Dùng để debug 404).
+    /// </summary>
+    [HttpGet("ping")]
+    [AllowAnonymous]
+    public IActionResult Ping()
+    {
+        return Ok(new { message = "TechnicianZones API is online!", time = DateTime.UtcNow });
+    }
+
+
+    /// <summary>
     /// Lấy toàn bộ phân công tuyến (Admin / Manager).
     /// </summary>
     [HttpGet]

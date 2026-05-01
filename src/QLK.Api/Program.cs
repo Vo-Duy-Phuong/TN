@@ -1,4 +1,6 @@
+// QLK Warehouse API - Technician Zones Integration - 2026-05-01
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
