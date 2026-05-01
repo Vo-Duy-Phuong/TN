@@ -28,19 +28,22 @@ public class ServiceRequestService : IServiceRequestService
     private readonly INotificationService _notificationService;
     private readonly IEmailService _emailService;
     private readonly IGeocodingService _geocodingService;
+    private readonly IServiceScopeFactory _scopeFactory;
 
     public ServiceRequestService(
         ApplicationDbContext context, 
         IAuditService auditService,
         INotificationService notificationService,
         IEmailService emailService,
-        IGeocodingService geocodingService)
+        IGeocodingService geocodingService,
+        IServiceScopeFactory scopeFactory)
     {
         _context = context;
         _auditService = auditService;
         _notificationService = notificationService;
         _emailService = emailService;
         _geocodingService = geocodingService;
+        _scopeFactory = scopeFactory;
     }
 
     public async Task<(IEnumerable<ServiceRequestDto> Items, int TotalCount)> GetRequestsAsync(ServiceRequestFilterDto filter, CancellationToken ct = default)
@@ -187,29 +190,39 @@ public class ServiceRequestService : IServiceRequestService
             var tech = await _context.Users.FindAsync(new object[] { request.AssignedTechnicianId.Value }, ct);
             if (tech != null)
             {
-                // Send notification asynchronously to avoid blocking the UI
-                _ = _notificationService.CreateAndSendAsync(new DTOs.Notifications.CreateNotificationDto(
-                    tech.Id,
-                    "Phân công công việc mới",
-                    $"Bạn đã được phân công hỗ trợ khách hàng {request.CustomerName} ({request.ServiceType})",
-                    NotificationType.System,
-                    $"/service-requests",
-                    request.Id,
-                    "ServiceRequest"
-                ), ct);
+                // Run notifications and emails in a separate scope to avoid blocking the main thread
+                // and to prevent 'Disposed Object' errors.
+                _ = Task.Run(async () => {
+                    try {
+                        using var scope = _scopeFactory.CreateScope();
+                        var scopedNotificationService = scope.ServiceProvider.GetRequiredService<INotificationService>();
+                        var scopedEmailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
 
-                // Email notification - Run in background
-                if (!string.IsNullOrEmpty(tech.Email))
-                {
-                    var emailMessage = $"Bạn có một yêu cầu dịch vụ mới:<br/>" +
-                                     $"<b>Khách hàng:</b> {request.CustomerName}<br/>" +
-                                     $"<b>Dịch vụ:</b> {request.ServiceType}<br/>" +
-                                     $"<b>Địa chỉ:</b> {request.Address}<br/>" +
-                                     $"<b>Mô tả:</b> {request.Description ?? "Không có"}<br/><br/>" +
-                                     $"Vui lòng kiểm tra hệ thống để biết thêm chi tiết.";
-                    
-                    _ = _emailService.SendNotificationEmailAsync(tech.Email, tech.FullName, "Thông báo phân công công việc", emailMessage, ct);
-                }
+                        await scopedNotificationService.CreateAndSendAsync(new DTOs.Notifications.CreateNotificationDto(
+                            tech.Id,
+                            "Phân công công việc mới",
+                            $"Bạn đã được phân công hỗ trợ khách hàng {request.CustomerName} ({request.ServiceType})",
+                            NotificationType.System,
+                            $"/service-requests",
+                            request.Id,
+                            "ServiceRequest"
+                        ), CancellationToken.None);
+
+                        if (!string.IsNullOrEmpty(tech.Email))
+                        {
+                            var emailMessage = $"Bạn có một yêu cầu dịch vụ mới:<br/>" +
+                                             $"<b>Khách hàng:</b> {request.CustomerName}<br/>" +
+                                             $"<b>Dịch vụ:</b> {request.ServiceType}<br/>" +
+                                             $"<b>Địa chỉ:</b> {request.Address}<br/>" +
+                                             $"<b>Mô tả:</b> {request.Description ?? "Không có"}<br/><br/>" +
+                                             $"Vui lòng kiểm tra hệ thống để biết thêm chi tiết.";
+                            
+                            await scopedEmailService.SendNotificationEmailAsync(tech.Email, tech.FullName, "Thông báo phân công công việc", emailMessage, CancellationToken.None);
+                        }
+                    } catch (Exception ex) {
+                        Console.WriteLine($"Background notification error: {ex.Message}");
+                    }
+                });
             }
         }
 
@@ -303,16 +316,25 @@ public class ServiceRequestService : IServiceRequestService
 
         await _context.SaveChangesAsync(ct);
 
-        // Notification logic - Non-blocking
-        _ = _notificationService.CreateAndSendAsync(new CreateNotificationDto(
-            technicianId,
-            "Phân công điều phối GIS",
-            $"Bạn đã được điều phối xử lý yêu cầu của {request.CustomerName} qua hệ thống bản đồ",
-            NotificationType.System,
-            "/service-requests",
-            request.Id,
-            "ServiceRequest"
-        ), ct);
+        // Notification logic - Non-blocking and safe scope
+        _ = Task.Run(async () => {
+            try {
+                using var scope = _scopeFactory.CreateScope();
+                var scopedNotificationService = scope.ServiceProvider.GetRequiredService<INotificationService>();
+                
+                await scopedNotificationService.CreateAndSendAsync(new CreateNotificationDto(
+                    technicianId,
+                    "Phân công điều phối GIS",
+                    $"Bạn đã được điều phối xử lý yêu cầu của {request.CustomerName} qua hệ thống bản đồ",
+                    NotificationType.System,
+                    "/service-requests",
+                    request.Id,
+                    "ServiceRequest"
+                ), CancellationToken.None);
+            } catch (Exception ex) {
+                Console.WriteLine($"GIS Notification error: {ex.Message}");
+            }
+        });
 
         await _auditService.LogAsync("Điều phối GIS", "ServiceRequest", id.ToString(), $"Điều phối kỹ thuật viên {tech.FullName} qua bản đồ nhiệt", ct);
     }
