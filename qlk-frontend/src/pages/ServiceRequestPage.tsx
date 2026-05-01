@@ -16,11 +16,14 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { serviceRequestApi } from '../api/serviceRequests';
 import { userApi } from '../api/users';
-import { ServiceStatus, type ServiceRequest, type User } from '../types';
+import { technicianZoneApi } from '../api/technicianZones';
+import { ServiceStatus, type ServiceRequest, type User, type TechnicianZoneSummaryDto } from '../types';
+
 
 const ServiceRequestPage: React.FC = () => {
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [technicians, setTechnicians] = useState<User[]>([]);
+  const [zoneSummaries, setZoneSummaries] = useState<TechnicianZoneSummaryDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -58,7 +61,19 @@ const ServiceRequestPage: React.FC = () => {
   const fetchTechnicians = async () => {
     try {
       const users = await userApi.getAll();
-      setTechnicians(users.filter(u => u.roleCode === 'TECHNICIAN' || u.roleCode === 'ADMIN'));
+      const techs = users.filter(u => u.roleCode === 'TECHNICIAN' || u.roleCode === 'ADMIN');
+      setTechnicians(techs);
+
+      // Fetch zone summaries cho các KTV
+      const techIds = techs.filter(u => u.roleCode === 'TECHNICIAN').map(u => u.id);
+      if (techIds.length > 0) {
+        try {
+          const summaries = await technicianZoneApi.getSummaryBatch(techIds);
+          setZoneSummaries(summaries);
+        } catch (err) {
+          console.error('Failed to fetch zone summaries:', err);
+        }
+      }
     } catch (error) {
       console.error('Failed to fetch techs:', error);
     }
@@ -250,8 +265,19 @@ const ServiceRequestPage: React.FC = () => {
                       <label style={{ fontSize: '11px', fontWeight: 800, color: '#1e40af', display: 'block', marginBottom: '4px' }}>❶ PHÂN CÔNG KỸ THUẬT</label>
                       <select className="form-input" value={assignTechId} onChange={e => setAssignTechId(e.target.value)} style={{ height: '42px', border: '1.5px solid #3b82f6', fontSize: '14px' }}>
                         <option value="">-- Chọn người thực hiện --</option>
-                        {technicians.map(t => <option key={t.id} value={t.id}>{t.fullName}</option>)}
+                        {technicians.map(t => {
+                          const summary = zoneSummaries.find(zs => zs.technicianId === t.id);
+                          const wardText = summary && summary.wardNames.length > 0 
+                            ? ` (${summary.wardNames.join(', ')})` 
+                            : '';
+                          return (
+                            <option key={t.id} value={t.id}>
+                              {t.fullName}{wardText}
+                            </option>
+                          );
+                        })}
                       </select>
+
                     </div>
                     <button onClick={() => handleProcess(ServiceStatus.Assigned)} disabled={isProcessing || !assignTechId} className="btn-primary" style={{ height: '42px', padding: '0 20px', fontSize: '14px', fontWeight: 800, whiteSpace: 'nowrap' }}>
                       🔧 PHÂN CÔNG
