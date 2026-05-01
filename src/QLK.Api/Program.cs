@@ -124,7 +124,7 @@ builder.Services.AddScoped<IRetrievalService, RetrievalService>();
 builder.Services.AddScoped<IGISService, GISService>();
 builder.Services.AddScoped<ITechnicianZoneService, TechnicianZoneService>();
 builder.Services.AddHttpClient<IGeocodingService, GeocodingService>();
-builder.Services.AddHttpClient<IAIService, GeminiService>();
+builder.Services.AddScoped<IAIService, GeminiService>();
 
 // Storage - Hierarchical Fallback: Cloudinary -> Minio (Local) -> LocalStorage (Prod Fallback)
 if (!string.IsNullOrEmpty(builder.Configuration["Cloudinary:CloudName"]))
