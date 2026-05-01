@@ -35,9 +35,13 @@ export const technicianZoneApi = {
       headers: getAuthHeaders(),
       body: JSON.stringify(dto),
     });
-    if (!res.ok) throw new Error('Không thể cập nhật tuyến phụ trách');
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.message || `Lỗi Server (${res.status})`);
+    }
     return res.json();
   },
+
 
   /**
    * Lấy danh sách KTV phụ trách 1 phường (dùng khi gán yêu cầu dịch vụ)
