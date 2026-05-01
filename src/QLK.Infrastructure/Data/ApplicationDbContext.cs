@@ -44,6 +44,9 @@ public class ApplicationDbContext : DbContext
     public DbSet<ServiceRequest> ServiceRequests => Set<ServiceRequest>();
     public DbSet<ServiceRequestEquipment> ServiceRequestEquipments => Set<ServiceRequestEquipment>();
 
+    // Phân công tuyến KTV
+    public DbSet<TechnicianZone> TechnicianZones => Set<TechnicianZone>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -305,6 +308,18 @@ public class ApplicationDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.ServiceRequestId)
                 .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // TechnicianZone
+        modelBuilder.Entity<TechnicianZone>(entity =>
+        {
+            entity.HasOne(tz => tz.Technician)
+                .WithMany(u => u.AssignedZones)
+                .HasForeignKey(tz => tz.TechnicianId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Unique: 1 KTV không phụ trách cùng 1 phường 2 lần
+            entity.HasIndex(tz => new { tz.TechnicianId, tz.WardName }).IsUnique();
         });
     }
 }

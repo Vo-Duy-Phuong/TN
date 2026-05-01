@@ -11,7 +11,44 @@ export interface User {
   avatar?: string;
   isActive: boolean;
   permissions: string[];
+  assignedZones?: string[]; // Danh sách phường KTV phụ trách
 }
+
+// Technician Zone
+export interface TechnicianZoneDto {
+  id: string;
+  technicianId: string;
+  technicianName: string;
+  wardName: string;
+  district: string;
+  province: string;
+  assignedAt: string;
+}
+
+export interface TechnicianZoneSummaryDto {
+  technicianId: string;
+  wardNames: string[];
+  wardCount: number;
+}
+
+export interface UpdateTechnicianZonesDto {
+  wardNames: string[];
+}
+
+/// Danh sách 10 phường TP. Cao Lãnh
+export const CAO_LANH_WARDS = [
+  'Phường 1',
+  'Phường 2',
+  'Phường 3',
+  'Phường 4',
+  'Phường 6',
+  'Phường 11',
+  'Mỹ Phú',
+  'Tân Thuận Đông',
+  'Hòa Thuận',
+  'Mỹ Ngãi',
+] as const;
+
 
 export interface Role {
   id: string;

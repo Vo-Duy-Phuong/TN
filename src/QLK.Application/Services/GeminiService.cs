@@ -12,14 +12,15 @@ namespace QLK.Application.Services;
 public class GeminiService : IAIService
 {
     private readonly HttpClient _httpClient;
-    private readonly string _apiKey;
+    private readonly List<string> _apiKeys;
     private readonly string _model;
     private readonly int _maxTokens;
 
     public GeminiService(HttpClient httpClient, IConfiguration configuration)
     {
         _httpClient = httpClient;
-        _apiKey = (configuration["AISettings:ApiKey"] ?? throw new ArgumentNullException("AISettings:ApiKey is missing")).Trim();
+        var rawKeys = (configuration["AISettings:ApiKey"] ?? throw new ArgumentNullException("AISettings:ApiKey is missing")).Trim();
+        _apiKeys = rawKeys.Split(';', StringSplitOptions.RemoveEmptyEntries).Select(k => k.Trim()).ToList();
         _model = (configuration["AISettings:Model"] ?? "gemini-1.5-flash").Trim();
         _maxTokens = configuration.GetValue<int>("AISettings:MaxTokens", 2048);
     }
@@ -101,72 +102,72 @@ CÂU HỎI CỦA NGƯỜI DÙNG: {message}
             }
         };
 
-        // Build URL
-        var currentModel = _model;
-        var url = $"https://generativelanguage.googleapis.com/v1beta/models/{currentModel}:generateContent?key={_apiKey}";
-        
-        try
+        HttpResponseMessage? response = null;
+        string lastError = "";
+
+        // Iterate through all provided API Keys
+        foreach (var key in _apiKeys)
         {
-            Console.WriteLine($"[Gemini Assistant] Attempting to connect with {_model}...");
-            var response = await _httpClient.PostAsJsonAsync(url, requestBody);
-            
-            if (!response.IsSuccessStatusCode)
+            var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={key}";
+            try
             {
-                var errorContent = await response.Content.ReadAsStringAsync();
-                var statusCode = response.StatusCode;
-                Console.WriteLine($"[Gemini API Warning] {currentModel} failed ({statusCode}). Probing for available models...");
+                Console.WriteLine($"[Gemini Assistant] Trying with key ending in ...{key.Substring(Math.Max(0, key.Length - 5))} and model {_model}");
+                response = await _httpClient.PostAsJsonAsync(url, requestBody);
+
+                if (response.IsSuccessStatusCode) break;
+
+                var statusCode = (int)response.StatusCode;
+                lastError = await response.Content.ReadAsStringAsync();
                 
-                // For 400 (Bad Request), 404 (Not Found) and 429 (Rate Limit) - try other models
-                if (statusCode == System.Net.HttpStatusCode.NotFound || 
-                    statusCode == System.Net.HttpStatusCode.BadRequest ||
-                    (int)statusCode == 429)
+                // If it's a quota issue (429), try next key
+                if (statusCode == 429)
                 {
-                    var listUrl = $"https://generativelanguage.googleapis.com/v1beta/models?key={_apiKey}";
+                    Console.WriteLine($"[Gemini Warning] Key exhausted. Trying next key...");
+                    continue;
+                }
+
+                // If it's a model issue (404/400), try model fallback with CURRENT key
+                if (statusCode == 404 || statusCode == 400)
+                {
+                    var listUrl = $"https://generativelanguage.googleapis.com/v1beta/models?key={key}";
                     var listResponse = await _httpClient.GetAsync(listUrl);
-                    
                     if (listResponse.IsSuccessStatusCode)
                     {
-                        var listJson = await listResponse.Content.ReadAsStringAsync();
-                        using var listDoc = JsonDocument.Parse(listJson);
-                        
-                        // Try each model until one works (skipping the failed one)
-                        if (listDoc.RootElement.TryGetProperty("models", out var modelsArray))
+                        var listDoc = JsonDocument.Parse(await listResponse.Content.ReadAsStringAsync());
+                        if (listDoc.RootElement.TryGetProperty("models", out var models))
                         {
-                            foreach (var m in modelsArray.EnumerateArray())
+                            foreach (var m in models.EnumerateArray())
                             {
                                 var mName = m.GetProperty("name").GetString()?.Replace("models/", "");
-                                var mMethods = m.GetProperty("supportedGenerationMethods").ToString();
+                                if (string.IsNullOrEmpty(mName) || mName == _model || 
+                                    mName.StartsWith("gemini-2.5") || mName.Contains("gemma")) continue;
                                 
-                                if (string.IsNullOrEmpty(mName) || !mMethods.Contains("generateContent"))
-                                    continue;
-                                // Skip the failed model, gemma-3-* (don't support system_instruction → 400), and gemma-3n-*
-                                if (mName == currentModel || 
-                                    (mName != null && mName.StartsWith("gemini-2.5")) ||
-                                    (mName != null && (mName.StartsWith("gemma-3") || mName.StartsWith("gemma-3n"))))
-                                    continue;
-                                
-                                Console.WriteLine($"[Gemini Assistant] Trying fallback model: {mName}...");
-                                var retryUrl = $"https://generativelanguage.googleapis.com/v1beta/models/{mName}:generateContent?key={_apiKey}";
+                                var retryUrl = $"https://generativelanguage.googleapis.com/v1beta/models/{mName}:generateContent?key={key}";
                                 response = await _httpClient.PostAsJsonAsync(retryUrl, requestBody);
-                                
-                                if (response.IsSuccessStatusCode)
-                                {
-                                    Console.WriteLine($"[Gemini Assistant] Success with fallback: {mName}!");
-                                    break;
-                                }
+                                if (response.IsSuccessStatusCode) break;
                             }
                         }
                     }
+                    if (response.IsSuccessStatusCode) break;
                 }
             }
-
-            if (!response.IsSuccessStatusCode)
+            catch (Exception ex)
             {
-                var errorContent = await response.Content.ReadAsStringAsync();
-                return new AIResponseDto { Text = $"Không thể kết nối với AI. Google báo lỗi: {errorContent}. Vui lòng kiểm tra lại API Key trong appsettings.json." };
+                lastError = ex.Message;
             }
+        }
+
+        if (response == null || !response.IsSuccessStatusCode)
+        {
+            return new AIResponseDto 
+            { 
+                Text = "Hệ thống AI hiện đang bị quá tải hoặc đạt giới hạn truy cập. Vui lòng quay lại sau ít phút hoặc thêm API Key dự phòng để tiếp tục." 
+            };
+        }
 
             var jsonStr = await response.Content.ReadAsStringAsync();
+            try
+            {
             using var doc = JsonDocument.Parse(jsonStr);
             
             var text = doc.RootElement

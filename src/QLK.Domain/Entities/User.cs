@@ -64,4 +64,5 @@ public class User
     public ICollection<InventoryLog> InventoryLogs { get; set; } = new List<InventoryLog>();
     public ICollection<Report> CreatedReports { get; set; } = new List<Report>();
     public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
+    public ICollection<TechnicianZone> AssignedZones { get; set; } = new List<TechnicianZone>();
 }

@@ -120,6 +120,7 @@ builder.Services.AddScoped<IServiceRequestService, ServiceRequestService>();
 builder.Services.AddScoped<IIndividualEquipmentService, IndividualEquipmentService>();
 builder.Services.AddScoped<IRetrievalService, RetrievalService>();
 builder.Services.AddScoped<IGISService, GISService>();
+builder.Services.AddScoped<ITechnicianZoneService, TechnicianZoneService>();
 builder.Services.AddHttpClient<IGeocodingService, GeocodingService>();
 builder.Services.AddHttpClient<IAIService, GeminiService>();
 

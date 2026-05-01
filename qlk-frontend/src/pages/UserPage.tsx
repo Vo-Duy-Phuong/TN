@@ -16,14 +16,17 @@ import {
   Camera,
   Save,
   Lock,
-  KeyRound
+  KeyRound,
+  MapPin
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5020/api';
 const ROOT_BASE = API_BASE.replace('/api', '');
 import { userApi } from '../api/users';
 import { roleApi } from '../api/roles';
-import type { User, Role } from '../types';
+import { technicianZoneApi } from '../api/technicianZones';
+import type { User, Role, TechnicianZoneSummaryDto } from '../types';
+import { CAO_LANH_WARDS } from '../types';
 import { useSearch } from '../contexts/SearchContext';
 import { useDebounce } from '../hooks/useDebounce';
 import { useAuth } from '../contexts/AuthContext';
@@ -62,6 +65,11 @@ const UserPage: React.FC = () => {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Zone State
+  const [selectedWards, setSelectedWards] = useState<string[]>([]);
+  const [zoneSummaries, setZoneSummaries] = useState<Record<string, string[]>>({});
+  const [isLoadingZones, setIsLoadingZones] = useState(false);
+
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
@@ -73,6 +81,21 @@ const UserPage: React.FC = () => {
       });
       setUsers(result.items);
       setTotalCount(result.totalCount);
+
+      // Fetch zone summaries cho tất cả KTV trong trang
+      const techIds = result.items
+        .filter(u => u.roleCode === 'TECHNICIAN')
+        .map(u => u.id);
+      if (techIds.length > 0) {
+        try {
+          const summaries = await technicianZoneApi.getSummaryBatch(techIds);
+          const summaryMap: Record<string, string[]> = {};
+          summaries.forEach((s: TechnicianZoneSummaryDto) => {
+            summaryMap[s.technicianId] = s.wardNames;
+          });
+          setZoneSummaries(summaryMap);
+        } catch { /* silently skip if zone API unavailable */ }
+      }
     } catch (error) {
       console.error('Failed to fetch users:', error);
     } finally {
@@ -105,7 +128,8 @@ const UserPage: React.FC = () => {
     }
   };
 
-  const openForm = (user?: User) => {
+  const openForm = async (user?: User) => {
+    setSelectedWards([]);
     if (user) {
       setSelectedUser(user);
       setFormData({
@@ -118,6 +142,15 @@ const UserPage: React.FC = () => {
         isActive: user.isActive
       });
       setAvatarPreview(getImageUrl(user.avatar));
+      // Load zones nếu là KTV
+      if (user.roleCode === 'TECHNICIAN') {
+        setIsLoadingZones(true);
+        try {
+          const summary = await technicianZoneApi.getByTechnician(user.id);
+          setSelectedWards(summary.wardNames);
+        } catch { setSelectedWards([]); }
+        finally { setIsLoadingZones(false); }
+      }
     } else {
       setSelectedUser(null);
       setFormData({
@@ -141,6 +174,16 @@ const UserPage: React.FC = () => {
     return `${ROOT_BASE}${path.startsWith('/') ? path : '/' + path}`;
   };
 
+  // Kiểm tra role đang chọn trong form có phải Kỹ thuật viên không
+  const isTechnicianRole = () => {
+    const role = roles.find(r => r.id === formData.roleId);
+    if (!role) return false;
+    const code = (role.code || '').toUpperCase();
+    const name = (role.name || '').toLowerCase();
+    return code === 'TECHNICIAN' || name === 'kỹ thuật viên' || name === 'ky thuat vien';
+  };
+
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -153,15 +196,27 @@ const UserPage: React.FC = () => {
       form.append('IsActive', formData.isActive.toString());
       if (avatarFile) form.append('AvatarFile', avatarFile);
 
+      let savedUserId: string | null = null;
       if (selectedUser) {
         await userApi.update(selectedUser.id, form);
-        alert('Cập nhật người dùng thành công!');
+        savedUserId = selectedUser.id;
       } else {
         form.append('Username', formData.username);
         form.append('Password', formData.password);
-        await userApi.create(form);
-        alert('Tạo người dùng thành công!');
+        const newUser = await userApi.create(form);
+        savedUserId = (newUser as any).id ?? null;
       }
+
+      // Lưu tuyến phường nếu role là KTV
+      if (isTechnicianRole() && savedUserId) {
+        try {
+          await technicianZoneApi.updateZones(savedUserId, { wardNames: selectedWards });
+        } catch (zoneErr) {
+          console.error('Zone save failed (non-critical):', zoneErr);
+        }
+      }
+
+      alert(selectedUser ? 'Cập nhật người dùng thành công!' : 'Tạo người dùng thành công!');
       setViewMode('LIST');
       fetchUsers();
     } catch (error: any) {
@@ -170,6 +225,12 @@ const UserPage: React.FC = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const toggleWard = (ward: string) => {
+    setSelectedWards(prev =>
+      prev.includes(ward) ? prev.filter(w => w !== ward) : [...prev, ward]
+    );
   };
 
   const handleDelete = async (user: User) => {
@@ -330,7 +391,7 @@ const UserPage: React.FC = () => {
                 </div>
               </div>
 
-              <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                 {user.isActive ? (
                   <span className="badge badge-success" style={{ padding: '4px 12px' }}>
                     <CheckCircle2 size={14} /> Đang hoạt động
@@ -340,6 +401,23 @@ const UserPage: React.FC = () => {
                     <XCircle size={14} /> Đã khóa
                   </span>
                 )}
+                {user.roleCode === 'TECHNICIAN' && (() => {
+                  const wards = zoneSummaries[user.id] ?? [];
+                  return (
+                    <span title={wards.length > 0 ? wards.join(', ') : 'Chưa phân công tuyến'}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '4px',
+                        fontSize: '12px', padding: '4px 10px', borderRadius: '20px',
+                        background: wards.length > 0 ? 'linear-gradient(135deg,#eff6ff,#dbeafe)' : 'var(--surface-2)',
+                        color: wards.length > 0 ? 'var(--primary)' : 'var(--text-muted)',
+                        border: `1px solid ${wards.length > 0 ? 'var(--primary-light,#93c5fd)' : 'var(--border)'}`,
+                        fontWeight: 600, cursor: 'default'
+                      }}>
+                      <MapPin size={11} />
+                      {wards.length > 0 ? `${wards.length} phường` : 'Chưa có tuyến'}
+                    </span>
+                  );
+                })()}
               </div>
             </div>
           ))
@@ -481,7 +559,18 @@ const UserPage: React.FC = () => {
             <select 
               className="form-input" 
               value={formData.roleId}
-              onChange={e => setFormData({...formData, roleId: e.target.value})}
+              onChange={e => {
+                const newRoleId = e.target.value;
+                setFormData({...formData, roleId: newRoleId});
+                
+                // Reset wards khi đổi sang role không phải KTV
+                const role = roles.find(r => r.id === newRoleId);
+                const isTech = role && (
+                  (role.code || '').toUpperCase() === 'TECHNICIAN' || 
+                  (role.name || '').toLowerCase() === 'kỹ thuật viên'
+                );
+                if (!isTech) setSelectedWards([]);
+              }}
               required
             >
               {roles.map(role => (
@@ -490,6 +579,117 @@ const UserPage: React.FC = () => {
             </select>
           </div>
         </div>
+
+        {/* ==== TUYẾN PHỤ TRÁCH (Chỉ hiện cho Kỹ thuật viên) ==== */}
+        {isTechnicianRole() && (
+          <div style={{
+            marginTop: '28px',
+            padding: '24px',
+            borderRadius: '16px',
+            background: 'linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%)',
+            border: '1.5px solid #93c5fd',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '36px', height: '36px', borderRadius: '10px',
+                  background: 'linear-gradient(135deg,#3b82f6,#1d4ed8)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  <MapPin size={18} color="white" />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>Tuyến Phụ Trách</h3>
+                  <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>Phường TP. Cao Lãnh</p>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedWards([...CAO_LANH_WARDS])}
+                  style={{
+                    fontSize: '12px', padding: '4px 12px', borderRadius: '8px',
+                    background: '#3b82f6', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 600
+                  }}
+                >
+                  Chọn tất cả
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedWards([])}
+                  style={{
+                    fontSize: '12px', padding: '4px 12px', borderRadius: '8px',
+                    background: 'var(--surface-2)', color: 'var(--text-secondary)',
+                    border: '1px solid var(--border)', cursor: 'pointer', fontWeight: 600
+                  }}
+                >
+                  Bỏ chọn
+                </button>
+              </div>
+            </div>
+
+            {isLoadingZones ? (
+              <div style={{ textAlign: 'center', padding: '20px' }}>
+                <Loader2 size={24} className="animate-spin" color="var(--primary)" />
+              </div>
+            ) : (
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+                gap: '10px'
+              }}>
+                {CAO_LANH_WARDS.map(ward => {
+                  const checked = selectedWards.includes(ward);
+                  return (
+                    <label
+                      key={ward}
+                      onClick={() => toggleWard(ward)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '10px',
+                        padding: '10px 14px', borderRadius: '12px', cursor: 'pointer',
+                        border: `2px solid ${checked ? '#3b82f6' : 'var(--border)'}`,
+                        background: checked ? 'rgba(59,130,246,0.08)' : 'var(--card-bg)',
+                        transition: 'all 0.18s ease',
+                        userSelect: 'none'
+                      }}
+                    >
+                      <div style={{
+                        width: '18px', height: '18px', borderRadius: '5px', flexShrink: 0,
+                        border: `2px solid ${checked ? '#3b82f6' : 'var(--border-strong)'}`,
+                        background: checked ? '#3b82f6' : 'transparent',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        transition: 'all 0.18s ease'
+                      }}>
+                        {checked && (
+                          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                            <path d="M1.5 5L4 7.5L8.5 2.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        )}
+                      </div>
+                      <span style={{
+                        fontSize: '13px', fontWeight: checked ? 700 : 500,
+                        color: checked ? '#1d4ed8' : 'var(--text-primary)'
+                      }}>{ward}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+
+            {selectedWards.length > 0 && (
+              <div style={{
+                marginTop: '14px', padding: '10px 14px', borderRadius: '10px',
+                background: 'rgba(59,130,246,0.1)', border: '1px solid #93c5fd',
+                fontSize: '13px', color: '#1d4ed8', fontWeight: 600,
+                display: 'flex', alignItems: 'center', gap: '6px'
+              }}>
+                <MapPin size={13} />
+                Đã chọn {selectedWards.length} phường: {selectedWards.join(' · ')}
+              </div>
+            )}
+          </div>
+        )}
+
 
         <div style={{ marginTop: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <input 
