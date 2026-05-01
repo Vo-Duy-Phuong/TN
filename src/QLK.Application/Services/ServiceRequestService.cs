@@ -187,8 +187,8 @@ public class ServiceRequestService : IServiceRequestService
             var tech = await _context.Users.FindAsync(new object[] { request.AssignedTechnicianId.Value }, ct);
             if (tech != null)
             {
-                // Internal notification
-                await _notificationService.CreateAndSendAsync(new DTOs.Notifications.CreateNotificationDto(
+                // Send notification asynchronously to avoid blocking the UI
+                _ = _notificationService.CreateAndSendAsync(new DTOs.Notifications.CreateNotificationDto(
                     tech.Id,
                     "Phân công công việc mới",
                     $"Bạn đã được phân công hỗ trợ khách hàng {request.CustomerName} ({request.ServiceType})",
@@ -198,25 +198,17 @@ public class ServiceRequestService : IServiceRequestService
                     "ServiceRequest"
                 ), ct);
 
-                // Email notification
+                // Email notification - Run in background
                 if (!string.IsNullOrEmpty(tech.Email))
                 {
-                    try
-                    {
-                        var emailMessage = $"Bạn có một yêu cầu dịch vụ mới:<br/>" +
-                                         $"<b>Khách hàng:</b> {request.CustomerName}<br/>" +
-                                         $"<b>Dịch vụ:</b> {request.ServiceType}<br/>" +
-                                         $"<b>Địa chỉ:</b> {request.Address}<br/>" +
-                                         $"<b>Mô tả:</b> {request.Description ?? "Không có"}<br/><br/>" +
-                                         $"Vui lòng kiểm tra hệ thống để biết thêm chi tiết.";
-                        
-                        await _emailService.SendNotificationEmailAsync(tech.Email, tech.FullName, "Thông báo phân công công việc", emailMessage, ct);
-                    }
-                    catch (Exception ex)
-                    {
-                        // Log email error but don't fail the whole process
-                        Console.WriteLine($"Failed to send assignment email: {ex.Message}");
-                    }
+                    var emailMessage = $"Bạn có một yêu cầu dịch vụ mới:<br/>" +
+                                     $"<b>Khách hàng:</b> {request.CustomerName}<br/>" +
+                                     $"<b>Dịch vụ:</b> {request.ServiceType}<br/>" +
+                                     $"<b>Địa chỉ:</b> {request.Address}<br/>" +
+                                     $"<b>Mô tả:</b> {request.Description ?? "Không có"}<br/><br/>" +
+                                     $"Vui lòng kiểm tra hệ thống để biết thêm chi tiết.";
+                    
+                    _ = _emailService.SendNotificationEmailAsync(tech.Email, tech.FullName, "Thông báo phân công công việc", emailMessage, ct);
                 }
             }
         }
@@ -311,8 +303,8 @@ public class ServiceRequestService : IServiceRequestService
 
         await _context.SaveChangesAsync(ct);
 
-        // Notification logic (Simplified reuse of existing logic)
-        await _notificationService.CreateAndSendAsync(new CreateNotificationDto(
+        // Notification logic - Non-blocking
+        _ = _notificationService.CreateAndSendAsync(new CreateNotificationDto(
             technicianId,
             "Phân công điều phối GIS",
             $"Bạn đã được điều phối xử lý yêu cầu của {request.CustomerName} qua hệ thống bản đồ",
