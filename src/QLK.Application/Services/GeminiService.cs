@@ -102,63 +102,67 @@ CÂU HỎI CỦA NGƯỜI DÙNG: {message}
             }
         };
 
-        // List of models to try in order of preference
-        var modelsToTry = new List<string> { _model, "gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.0-pro" }
-            .Distinct().ToList();
-
         HttpResponseMessage? response = null;
-        string lastError = "";
-
-        foreach (var modelToUse in modelsToTry)
+        
+        foreach (var key in _apiKeys)
         {
-            Console.WriteLine($"[Gemini Assistant] === Trying Model: {modelToUse} ===");
+            var keyDisplay = key.Length > 8 ? $"...{key.Substring(key.Length - 5)}" : "InvalidKey";
             
-            foreach (var key in _apiKeys)
+            // 1. Tự động lấy danh sách model khả dụng cho Key này
+            List<string> availableModels = new();
+            try {
+                var listUrl = $"https://generativelanguage.googleapis.com/v1beta/models?key={key}";
+                var listRes = await _httpClient.GetAsync(listUrl);
+                if (listRes.IsSuccessStatusCode) {
+                    var listDoc = JsonDocument.Parse(await listRes.Content.ReadAsStringAsync());
+                    if (listDoc.RootElement.TryGetProperty("models", out var models)) {
+                        foreach (var m in models.EnumerateArray()) {
+                            var mName = m.GetProperty("name").GetString();
+                            if (!string.IsNullOrEmpty(mName) && mName.Contains("gemini") && mName.Contains("generateContent"))
+                                availableModels.Add(mName); // Note: name already contains "models/" prefix
+                        }
+                    }
+                }
+            } catch { /* skip list error */ }
+
+            // Thêm các model mặc định nếu không list được
+            if (!availableModels.Any()) {
+                availableModels.Add($"models/{_model}");
+                availableModels.Add("models/gemini-1.5-flash");
+                availableModels.Add("models/gemini-1.5-pro");
+            }
+
+            // 2. Thử từng model khả dụng
+            foreach (var fullModelName in availableModels.Distinct())
             {
-                var keyDisplay = key.Length > 8 ? $"...{key.Substring(key.Length - 5)}" : "InvalidKey";
-                var url = $"https://generativelanguage.googleapis.com/v1beta/models/{modelToUse}:generateContent?key={key}";
-                
+                var url = $"https://generativelanguage.googleapis.com/v1beta/{fullModelName}:generateContent?key={key}";
                 try
                 {
-                    Console.WriteLine($"[Gemini Assistant] Attempting {modelToUse} with key: {keyDisplay}");
-                    
-                    // Update model in request body for each attempt
-                    var currentRequestBody = new
-                    {
-                        system_instruction = requestBody.system_instruction,
-                        contents = requestBody.contents,
-                        generationConfig = requestBody.generationConfig
-                    };
-
-                    response = await _httpClient.PostAsJsonAsync(url, currentRequestBody);
+                    Console.WriteLine($"[Gemini Assistant] Trying {fullModelName} with key: {keyDisplay}");
+                    response = await _httpClient.PostAsJsonAsync(url, requestBody);
 
                     if (response.IsSuccessStatusCode) 
                     {
-                        Console.WriteLine($"[Gemini Assistant] SUCCESS! Model: {modelToUse}, Key: {keyDisplay}");
-                        break;
+                        Console.WriteLine($"[Gemini Assistant] SUCCESS! Model: {fullModelName}");
+                        break; 
                     }
 
                     var statusCode = (int)response.StatusCode;
-                    var errorContent = await response.Content.ReadAsStringAsync();
-                    Console.WriteLine($"[Gemini Warning] {modelToUse} failed with key {keyDisplay}. Status: {statusCode}");
+                    Console.WriteLine($"[Gemini Warning] {fullModelName} failed (Status: {statusCode})");
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[Gemini Error] Exception with {modelToUse}/{keyDisplay}: {ex.Message}");
+                catch (Exception ex) {
+                    Console.WriteLine($"[Gemini Error] {fullModelName} Exception: {ex.Message}");
                 }
             }
-            
+
             if (response != null && response.IsSuccessStatusCode) break;
         }
 
         if (response == null || !response.IsSuccessStatusCode)
         {
-            Console.WriteLine("[Gemini Critical] ALL MODELS AND ALL KEYS EXHAUSTED.");
-            return new AIResponseDto 
-            { 
-                Text = "Hệ thống AI hiện đang bị quá tải hoặc đạt giới hạn truy cập. Vui lòng quay lại sau ít phút hoặc thêm API Key dự phòng để tiếp tục." 
-            };
+            return new AIResponseDto { Text = "Hệ thống AI hiện đang bị quá tải hoặc đạt giới hạn truy cập. Vui lòng quay lại sau ít phút hoặc thêm API Key dự phòng để tiếp tục." };
         }
+
 
 
 
