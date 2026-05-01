@@ -25,76 +25,86 @@ namespace QLK.Application.Services
             string msg = message.ToLower().Trim();
             string response = "";
 
-            // 1. Danh sách từ dừng (Stop words) cần loại bỏ để lấy từ khóa chính
-            string[] stopWords = { "có", "bao", "nhiêu", "tại", "toàn", "hệ", "thống", "hiện", "tại", "tổng", "của", "là", "cho", "tôi", "biết", "với", "hỏi", "về", "cái", "chiếc", "loại" };
-            string searchKey = msg;
-            foreach (var word in stopWords) {
-                searchKey = Regex.Replace(searchKey, "\\b" + word + "\\b", "").Trim();
-            }
-            searchKey = Regex.Replace(searchKey, "\\s+", " "); // Làm sạch khoảng trắng
-
             try
             {
-                // A. XỬ LÝ CÁC CÂU HỎI THỐNG KÊ TỔNG QUÁT (Keywords: tồn, yêu cầu, ktv, kho)
-                
-                // 1. Thống kê Kho hàng
-                if (msg.Contains("kho") && !msg.Contains("tồn"))
+                // 1. Thống kê NHÂN VIÊN / NGƯỜI DÙNG
+                if (msg.Contains("người dùng") || msg.Contains("nhân viên") || msg.Contains("tài khoản"))
                 {
-                    var warehouses = await _context.Warehouses.Select(w => w.WarehouseName).ToListAsync();
-                    response = $"Hệ thống có **{warehouses.Count}** kho hàng: {string.Join(", ", warehouses)}.";
+                    var count = await _context.Users.CountAsync(u => !u.IsDeleted);
+                    var active = await _context.Users.CountAsync(u => !u.IsDeleted && u.IsActive);
+                    response = $"Hệ thống hiện có **{count}** người dùng (nhân viên), trong đó có **{active}** tài khoản đang hoạt động.";
                 }
-                // 2. Thống kê Kỹ thuật viên
-                else if (msg.Contains("kỹ thuật viên") || msg.Contains("nhân viên") || msg.Contains("ktv"))
+                // 2. Thống kê KỸ THUẬT VIÊN
+                else if (msg.Contains("kỹ thuật viên") || msg.Contains("ktv"))
                 {
-                    var totalTechs = await _context.Users.Include(u => u.Role).CountAsync(u => u.Role.Code == "TECHNICIAN" && !u.IsDeleted);
-                    var busyTechs = await _context.ServiceRequests.Where(s => s.Status == ServiceStatus.Approved || s.Status == ServiceStatus.Assigned).Select(s => s.AssignedTechnicianId).Distinct().CountAsync();
-                    response = $"Hiện có **{totalTechs}** kỹ thuật viên. Trong đó có **{busyTechs}** người đang bận xử lý yêu cầu.";
+                    var total = await _context.Users.Include(u => u.Role).CountAsync(u => u.Role.Code == "TECHNICIAN" && !u.IsDeleted);
+                    response = $"Hiện có **{total}** kỹ thuật viên chính thức trong hệ thống.";
                 }
-                // 3. Thống kê Yêu cầu dịch vụ
-                else if (msg.Contains("yêu cầu") || msg.Contains("đăng ký") || msg.Contains("khách hàng"))
+                // 3. Thống kê THƯƠNG HIỆU / HÃNG
+                else if (msg.Contains("thương hiệu") || msg.Contains("hãng"))
                 {
-                    var pending = await _context.ServiceRequests.CountAsync(s => s.Status == ServiceStatus.Pending);
-                    var processing = await _context.ServiceRequests.CountAsync(s => s.Status == ServiceStatus.Approved || s.Status == ServiceStatus.Assigned);
-                    response = $"📊 **Yêu cầu dịch vụ:** Đang có **{pending}** yêu cầu mới và **{processing}** yêu cầu đang triển khai.";
+                    var count = await _context.Brands.CountAsync();
+                    var names = await _context.Brands.Select(b => b.BrandName).ToListAsync();
+                    response = $"Hệ thống quản lý **{count}** thương hiệu: {string.Join(", ", names)}.";
                 }
-                // 4. Thống kê Tồn kho / Sản phẩm
-                else if (msg.Contains("tồn") || msg.Contains("sản phẩm") || msg.Contains("hàng") || string.IsNullOrEmpty(searchKey))
+                // 4. Thống kê DANH MỤC / LOẠI
+                else if (msg.Contains("danh mục") || msg.Contains("loại sản phẩm"))
                 {
-                    var totalProducts = await _context.Products.CountAsync(p => !p.IsDeleted);
-                    var totalStock = await _context.Products.Where(p => !p.IsDeleted).SumAsync(p => p.Quantity);
-                    response = $"Tổng tồn kho toàn hệ thống là **{totalStock}** đơn vị (thuộc **{totalProducts}** loại sản phẩm).";
+                    var count = await _context.Categories.CountAsync();
+                    var names = await _context.Categories.Select(c => c.CategoryName).ToListAsync();
+                    response = $"Hệ thống có **{count}** danh mục sản phẩm: {string.Join(", ", names)}.";
                 }
-
-                // B. NẾU VẪN CHƯA CÓ CÂU TRẢ LỜI HOẶC CÓ TỪ KHÓA RIÊNG BIỆT -> TÌM KIẾM TOÀN CẦU
-                if (string.IsNullOrEmpty(response) || (!string.IsNullOrEmpty(searchKey) && searchKey.Length > 1))
+                // 5. Thống kê PHIẾU THU HỒI
+                else if (msg.Contains("thu hồi"))
                 {
-                    // Tìm trong Sản phẩm
-                    var products = await _context.Products
-                        .Where(p => !p.IsDeleted && (p.ProductName.ToLower().Contains(searchKey) || p.Description.ToLower().Contains(searchKey)))
-                        .ToListAsync();
+                    var count = await _context.RetrievalReceipts.CountAsync();
+                    var pending = await _context.RetrievalReceipts.CountAsync(r => r.Status == 0);
+                    response = $"Tổng cộng có **{count}** phiếu thu hồi thiết bị, trong đó có **{pending}** phiếu đang chờ xử lý.";
+                }
+                // 6. Thống kê PHIẾU NHẬP / XUẤT
+                else if (msg.Contains("nhập kho") || msg.Contains("phiếu nhập"))
+                {
+                    var count = await _context.ImportReceipts.CountAsync();
+                    response = $"Hệ thống đã thực hiện **{count}** lượt nhập kho thành công.";
+                }
+                else if (msg.Contains("xuất kho") || msg.Contains("phiếu xuất"))
+                {
+                    var count = await _context.ExportReceipts.CountAsync();
+                    response = $"Hệ thống đã thực hiện **{count}** lượt xuất kho cho kỹ thuật viên.";
+                }
+                // 7. Thống kê KHO HÀNG
+                else if (msg.Contains("kho") && !msg.Contains("tồn"))
+                {
+                    var count = await _context.Warehouses.CountAsync();
+                    var names = await _context.Warehouses.Select(w => w.WarehouseName).ToListAsync();
+                    response = $"Hệ thống có **{count}** địa điểm kho: {string.Join(", ", names)}.";
+                }
+                // 8. Thống kê TỒN KHO / SẢN PHẨM (Mặc định nếu hỏi chung chung)
+                else if (msg.Contains("tồn") || msg.Contains("sản phẩm") || msg.Contains("hàng") || msg.Contains("bao nhiêu"))
+                {
+                    // Thử tìm kiếm theo tên sản phẩm cụ thể trước
+                    string searchKey = msg.Replace("có", "").Replace("bao", "").Replace("nhiêu", "").Replace("thiết", "").Replace("bị", "").Replace("tồn", "").Replace("kho", "").Trim();
                     
-                    // Tìm trong Thương hiệu
-                    var brandMatch = await _context.Brands.FirstOrDefaultAsync(b => b.BrandName.ToLower().Contains(searchKey));
-                    
-                    if (products.Any())
+                    if (searchKey.Length > 1)
                     {
-                        var totalQty = products.Sum(p => p.Quantity);
-                        var detail = string.Join(", ", products.Take(5).Select(p => p.ProductName + " (" + p.Quantity + ")"));
-                        response = $"Tìm thấy **{products.Count}** loại thiết bị liên quan đến '{searchKey}' với tổng tồn kho là **{totalQty}** chiếc. \n\nVí dụ: {detail}...";
+                        var products = await _context.Products.Where(p => !p.IsDeleted && p.ProductName.ToLower().Contains(searchKey)).ToListAsync();
+                        if (products.Any()) {
+                            response = $"Tìm thấy **{products.Count}** loại liên quan đến '{searchKey}', tổng tồn kho: **{products.Sum(p => p.Quantity)}** chiếc.";
+                        }
                     }
-                    else if (brandMatch != null)
-                    {
-                        var brandProducts = await _context.Products.Where(p => !p.IsDeleted && p.BrandId == brandMatch.Id).ToListAsync();
-                        response = $"Thương hiệu **{brandMatch.BrandName}** hiện có **{brandProducts.Count}** loại sản phẩm trong kho với tổng số lượng là **{brandProducts.Sum(p => p.Quantity)}** chiếc.";
+                    
+                    if (string.IsNullOrEmpty(response)) {
+                        var totalStock = await _context.Products.Where(p => !p.IsDeleted).SumAsync(p => p.Quantity);
+                        response = $"Tổng tồn kho thiết bị trên toàn hệ thống là **{totalStock}** chiếc.";
                     }
                 }
-
-                // C. CÂU TRẢ LỜI MẶC ĐỊNH (Nếu vẫn không tìm thấy gì)
-                if (string.IsNullOrEmpty(response))
+                // 9. Câu chào / Mặc định
+                else
                 {
-                    response = $"Tôi không tìm thấy thông tin nào về '{searchKey}'. Bạn có thể thử hỏi về: tồn kho iGate, danh sách kỹ thuật viên, hay tổng số yêu cầu mới.";
+                    response = "Xin chào! Tôi có thể giúp bạn thống kê mọi thứ: Người dùng, Thương hiệu, Danh mục, Phiếu thu hồi, Tồn kho... Bạn muốn biết về thông tin nào?";
                 }
             }
+
 
             catch (Exception ex)
             {
