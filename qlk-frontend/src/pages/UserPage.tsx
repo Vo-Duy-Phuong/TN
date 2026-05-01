@@ -211,10 +211,12 @@ const UserPage: React.FC = () => {
       if (isTechnicianRole() && savedUserId) {
         try {
           await technicianZoneApi.updateZones(savedUserId, { wardNames: selectedWards });
-        } catch (zoneErr) {
-          console.error('Zone save failed (non-critical):', zoneErr);
+        } catch (zoneErr: any) {
+          console.error('Zone save failed:', zoneErr);
+          alert('Thông tin cá nhân đã lưu, nhưng LỖI LƯU TUYẾN: ' + (zoneErr.message || 'Không xác định'));
         }
       }
+
 
       alert(selectedUser ? 'Cập nhật người dùng thành công!' : 'Tạo người dùng thành công!');
       setViewMode('LIST');
