@@ -54,12 +54,18 @@ namespace QLK.Application.Services
                     var names = await _context.Categories.Select(c => c.CategoryName).ToListAsync();
                     response = $"Hệ thống có **{count}** danh mục sản phẩm: {string.Join(", ", names)}.";
                 }
-                // 5. Thống kê PHIẾU THU HỒI
+                // 5. Thống kê PHIẾU THU HỒI & QUYẾT TOÁN
                 else if (msg.Contains("thu hồi"))
                 {
                     var count = await _context.RetrievalReceipts.CountAsync();
                     var pending = await _context.RetrievalReceipts.CountAsync(r => r.Status == 0);
                     response = $"Tổng cộng có **{count}** phiếu thu hồi thiết bị, trong đó có **{pending}** phiếu đang chờ xử lý.";
+                }
+                else if (msg.Contains("quyết toán") || msg.Contains("lệch") || msg.Contains("hao hụt"))
+                {
+                    var errorCount = await _context.MaterialReconciliations.CountAsync(m => m.Status == 0);
+                    var totalSettled = await _context.MaterialReconciliations.CountAsync();
+                    response = $"Hệ thống tự động hóa quyết toán vật tư đã xử lý **{totalSettled}** mục. Hiện có **{errorCount}** trường hợp đang bị lệch vật tư (hao hụt) cần giải trình.";
                 }
                 // 6. Thống kê PHIẾU NHẬP / XUẤT
                 else if (msg.Contains("nhập kho") || msg.Contains("phiếu nhập"))

@@ -40,9 +40,10 @@ public class ApplicationDbContext : DbContext
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<IndividualEquipment> IndividualEquipments => Set<IndividualEquipment>();
     
-    // Dịch vụ khách hàng
+    // Dịch vụ khách hàng & Quyết toán
     public DbSet<ServiceRequest> ServiceRequests => Set<ServiceRequest>();
     public DbSet<ServiceRequestEquipment> ServiceRequestEquipments => Set<ServiceRequestEquipment>();
+    public DbSet<MaterialReconciliation> MaterialReconciliations => Set<MaterialReconciliation>();
 
     // Phân công tuyến KTV
     public DbSet<TechnicianZone> TechnicianZones => Set<TechnicianZone>();
@@ -320,6 +321,20 @@ public class ApplicationDbContext : DbContext
 
             // Unique: 1 KTV không phụ trách cùng 1 phường 2 lần
             entity.HasIndex(tz => new { tz.TechnicianId, tz.WardName }).IsUnique();
+        });
+
+        // MaterialReconciliation
+        modelBuilder.Entity<MaterialReconciliation>(entity =>
+        {
+            entity.HasOne(mr => mr.ServiceRequest)
+                .WithMany()
+                .HasForeignKey(mr => mr.ServiceRequestId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(mr => mr.Product)
+                .WithMany()
+                .HasForeignKey(mr => mr.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

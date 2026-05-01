@@ -219,6 +219,70 @@ public class ServiceRequestService : IServiceRequestService
         }
 
         await _auditService.LogAsync("Cập nhật trạng thái", "ServiceRequest", id.ToString(), $"Cập nhật trạng thái yêu cầu sang {dto.Status}", ct);
+
+        // AUTO-RECONCILIATION TRIGGER: When status changes to Completed
+        if (dto.Status == ServiceStatus.Completed && oldStatus != ServiceStatus.Completed)
+        {
+            await HandleAutoReconciliationAsync(id, ct);
+        }
+    }
+
+    private async Task HandleAutoReconciliationAsync(Guid requestId, CancellationToken ct)
+    {
+        // 1. Get all materials exported for this specific request
+        var exports = await _context.ExportReceipts
+            .Include(x => x.ExportDetails)
+            .Where(x => x.ServiceRequestId == requestId && x.Status == ReceiptStatus.Completed)
+            .ToListAsync(ct);
+
+        var exportedTotals = exports.SelectMany(x => x.ExportDetails)
+            .GroupBy(d => d.ProductId)
+            .Select(g => new { ProductId = g.Key, Total = g.Sum(d => d.Quantity) })
+            .ToList();
+
+        // 2. Get all materials reported as USED by technician
+        var usedMaterials = await _context.ServiceRequestEquipments
+            .Where(x => x.ServiceRequestId == requestId)
+            .ToListAsync(ct);
+
+        // 3. Process each product to create Reconciliation record
+        foreach (var export in exportedTotals)
+        {
+            var used = usedMaterials.FirstOrDefault(u => u.ProductId == export.ProductId)?.Quantity ?? 0;
+            
+            var recon = new MaterialReconciliation
+            {
+                Id = Guid.NewGuid(),
+                ServiceRequestId = requestId,
+                ProductId = export.ProductId,
+                ExportedQuantity = export.Total,
+                UsedQuantity = used,
+                Status = (export.Total == used) ? 1 : 0, // 1: Auto-matched, 0: Discrepancy
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await _context.MaterialReconciliations.AddAsync(recon, ct);
+
+            // Notify if mismatch
+            if (recon.Discrepancy != 0)
+            {
+                var request = await _context.ServiceRequests.FindAsync(new object[] { requestId }, ct);
+                if (request?.AssignedTechnicianId != null)
+                {
+                    await _notificationService.CreateAndSendAsync(new CreateNotificationDto(
+                        request.AssignedTechnicianId.Value,
+                        "Cảnh báo chênh lệch vật tư",
+                        $"Phát hiện chênh lệch {recon.Discrepancy} đơn vị vật tư tại yêu cầu {request.CustomerName}. Vui lòng giải trình ngay.",
+                        NotificationType.System,
+                        "/reconciliation",
+                        recon.Id,
+                        "MaterialReconciliation"
+                    ), ct);
+                }
+            }
+        }
+
+        await _context.SaveChangesAsync(ct);
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken ct = default)

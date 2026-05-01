@@ -33,6 +33,10 @@ public class ExportReceipt
     
     public DateTime? UpdatedAt { get; set; }
     
+    /// <summary>Liên kết với yêu cầu dịch vụ (để quyết toán vật tư)</summary>
+    public Guid? ServiceRequestId { get; set; }
+    public ServiceRequest? ServiceRequest { get; set; }
+    
     // Navigation properties
     public ICollection<ExportDetail> ExportDetails { get; set; } = new List<ExportDetail>();
 }
