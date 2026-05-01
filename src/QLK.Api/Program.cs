@@ -198,6 +198,34 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        
+        // Manual Patch for Auto-Reconciliation (Ensures DB is ready even if migration file is missing)
+        try {
+            await context.Database.ExecuteSqlRawAsync(@"
+                DO $$ 
+                BEGIN 
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='ExportReceipts' AND column_name='ServiceRequestId') THEN
+                        ALTER TABLE ""ExportReceipts"" ADD COLUMN ""ServiceRequestId"" uuid NULL;
+                    END IF;
+
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='MaterialReconciliations') THEN
+                        CREATE TABLE ""MaterialReconciliations"" (
+                            ""Id"" uuid NOT NULL PRIMARY KEY,
+                            ""ServiceRequestId"" uuid NOT NULL,
+                            ""ProductId"" uuid NOT NULL,
+                            ""ExportedQuantity"" integer NOT NULL,
+                            ""UsedQuantity"" integer NOT NULL,
+                            ""Explanation"" text NULL,
+                            ""Status"" integer NOT NULL,
+                            ""CreatedAt"" timestamp with time zone NOT NULL
+                        );
+                    END IF;
+                END $$;");
+            Console.WriteLine("Database schema patch applied successfully.");
+        } catch (Exception ex) {
+            Console.WriteLine($"Database patch warning: {ex.Message}");
+        }
+
         // Auto-apply pending migrations on startup
         await context.Database.MigrateAsync();
         Console.WriteLine("Database migrations applied successfully.");
